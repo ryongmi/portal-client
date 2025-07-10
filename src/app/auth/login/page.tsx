@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 
 export default function LoginPage(): JSX.Element {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ export default function LoginPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const router = useRouter()
+  const { login } = useAuth()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -55,13 +57,19 @@ export default function LoginPage(): JSX.Element {
     setIsLoading(true)
     
     try {
-      // 실제 API 호출 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // 실제 API 호출
+      await login(formData.email, formData.password)
       
       // 로그인 성공 시 메인 페이지로 이동
       router.push('/')
-    } catch (error) {
-      setErrors({ submit: '로그인에 실패했습니다. 다시 시도해주세요.' })
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined
+      
+      setErrors({ 
+        submit: errorMessage || '로그인에 실패했습니다. 다시 시도해주세요.' 
+      })
     } finally {
       setIsLoading(false)
     }

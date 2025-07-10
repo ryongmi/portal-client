@@ -10,13 +10,19 @@ import Modal from '@/components/common/Modal'
 import Pagination from '@/components/common/Pagination'
 import SearchFilters from '@/components/common/SearchFilters'
 import PermissionForm from '@/components/forms/PermissionForm'
-import { Permission } from '@/types'
-import { PaginatedResultBase, SearchFilters as SearchFiltersType, SortOrderType, LimitType } from '@/types/api'
+import {
+  PaginatedResultBase,
+  SearchFilters as SearchFiltersType,
+  SortOrderType,
+  LimitType,
+} from '@/types/api'
 import { usePagination } from '@/hooks/usePagination'
-import { mockPermissions, mockServices, mockRoles, mockRolePermissions } from '@/data/mockData'
+import { usePermissions } from '@/hooks/usePermissions'
+import type { PermissionSearchQuery, PermissionSearchResult, PermissionDetail } from '@krgeobuk/permission'
+import type { Service } from '@krgeobuk/service'
 
 export default function PermissionsPage(): JSX.Element {
-  const [permissions, setPermissions] = useState<Permission[]>([])
+  const [permissions, setPermissions] = useState<PermissionSearchResult[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [pageInfo, setPageInfo] = useState<PaginatedResultBase>({
     page: 1,
@@ -28,94 +34,42 @@ export default function PermissionsPage(): JSX.Element {
   })
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
-  const [selectedPermission, setSelectedPermission] = useState<Permission | null>(null)
+  const [selectedPermission, setSelectedPermission] = useState<PermissionSearchResult | null>(null)
+  const [permissionDetail, setPermissionDetail] = useState<PermissionDetail | null>(null)
   const [currentFilters, setCurrentFilters] = useState<SearchFiltersType>({})
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false)
-  const [permissionToDelete, setPermissionToDelete] = useState<Permission | null>(null)
+  const [permissionToDelete, setPermissionToDelete] = useState<PermissionSearchResult | null>(null)
+  const [services, setServices] = useState<Service[]>([])
 
   const pagination = usePagination()
+  const permissionHooks = usePermissions()
 
-  // Mock API 호출 함수
-  const fetchPermissions = useCallback(async (params: any): Promise<void> => {
-    setLoading(true)
+  // API 호출 함수
+  const fetchPermissions = useCallback(
+    async (params: PermissionSearchQuery): Promise<void> => {
+      setLoading(true)
+      try {
+        const response = await permissionHooks.fetchPermissions(params)
+        setPermissions(response.items)
+        setPageInfo(response.pageInfo)
+      } catch (error) {
+        console.error('권한 목록 조회 실패:', error)
+      } finally {
+        setLoading(false)
+      }
+    },
+    [permissionHooks]
+  )
+
+  // 서비스 목록 조회 (필터링용)
+  const fetchServices = useCallback(async (): Promise<void> => {
     try {
-      // 최소 로딩 시간 보장 (UX 개선)
-      const minLoadingTime = new Promise((resolve) => setTimeout(resolve, 200))
-      
-      // 필터링 로직
-      let filteredPermissions = [...mockPermissions]
-      
-      if (params.action) {
-        filteredPermissions = filteredPermissions.filter(permission => 
-          permission.action.toLowerCase().includes(params.action.toLowerCase())
-        )
-      }
-      
-      if (params.description) {
-        filteredPermissions = filteredPermissions.filter(permission => 
-          permission.description?.toLowerCase().includes(params.description.toLowerCase())
-        )
-      }
-      
-      if (params.serviceId) {
-        filteredPermissions = filteredPermissions.filter(permission => 
-          permission.serviceId === params.serviceId
-        )
-      }
-      
-      if (params.resource) {
-        filteredPermissions = filteredPermissions.filter(permission => 
-          permission.action.split(':')[0] === params.resource
-        )
-      }
-      
-      if (params.actionType) {
-        filteredPermissions = filteredPermissions.filter(permission => 
-          permission.action.split(':')[1] === params.actionType
-        )
-      }
-      
-      // 정렬 로직
-      if (params.sortBy) {
-        filteredPermissions.sort((a, b) => {
-          const aValue = a[params.sortBy as keyof Permission]
-          const bValue = b[params.sortBy as keyof Permission]
-          
-          if (typeof aValue === 'string' && typeof bValue === 'string') {
-            return params.sortOrder === SortOrderType.ASC 
-              ? aValue.localeCompare(bValue)
-              : bValue.localeCompare(aValue)
-          }
-          
-          return params.sortOrder === SortOrderType.ASC 
-            ? (aValue as any) - (bValue as any)
-            : (bValue as any) - (aValue as any)
-        })
-      }
-      
-      // 페이징 로직
-      const totalItems = filteredPermissions.length
-      const totalPages = Math.ceil(totalItems / params.limit)
-      const startIndex = (params.page - 1) * params.limit
-      const endIndex = startIndex + params.limit
-      const paginatedPermissions = filteredPermissions.slice(startIndex, endIndex)
-      
-      setPermissions(paginatedPermissions)
-      setPageInfo({
-        page: params.page,
-        limit: params.limit,
-        totalItems,
-        totalPages,
-        hasPreviousPage: params.page > 1,
-        hasNextPage: params.page < totalPages,
-      })
-      
-      // 최소 로딩 시간 대기
-      await minLoadingTime
+      // 서비스 목록 조회 API 호출 (임시로 빈 배열)
+      // const response = await ServiceService.getServices()
+      // setServices(response.data.items)
+      setServices([]) // 임시
     } catch (error) {
-      console.error('Failed to fetch permissions:', error)
-    } finally {
-      setLoading(false)
+      console.error('서비스 목록 조회 실패:', error)
     }
   }, [])
 
@@ -127,9 +81,10 @@ export default function PermissionsPage(): JSX.Element {
       sortBy: 'action',
       sortOrder: SortOrderType.ASC,
     })
-  }, [])
+    fetchServices()
+  }, [fetchPermissions, fetchServices])
 
-  const handleOpenModal = (permission?: Permission): void => {
+  const handleOpenModal = (permission?: PermissionSearchResult): void => {
     setSelectedPermission(permission || null)
     setIsModalOpen(true)
   }
@@ -139,27 +94,47 @@ export default function PermissionsPage(): JSX.Element {
     setSelectedPermission(null)
   }
 
-  const handleOpenDetailModal = (permission: Permission): void => {
-    setSelectedPermission(permission)
-    setIsDetailModalOpen(true)
+  const handleOpenDetailModal = async (permission: PermissionSearchResult): Promise<void> => {
+    try {
+      if (permission.id) {
+        const detail = await permissionHooks.getPermissionById(permission.id)
+        setPermissionDetail(detail)
+        setSelectedPermission(permission)
+        setIsDetailModalOpen(true)
+      }
+    } catch (error) {
+      console.error('권한 상세 정보 조회 실패:', error)
+    }
   }
 
   const handleCloseDetailModal = (): void => {
     setIsDetailModalOpen(false)
     setSelectedPermission(null)
+    setPermissionDetail(null)
   }
 
-  const handleDeletePermission = (permission: Permission): void => {
+  const handleDeletePermission = (permission: PermissionSearchResult): void => {
     setPermissionToDelete(permission)
     setDeleteConfirmOpen(true)
   }
 
-  const confirmDeletePermission = (): void => {
-    if (permissionToDelete) {
-      console.log('Deleting permission:', permissionToDelete.id)
-      // 실제로는 API 호출
-      setDeleteConfirmOpen(false)
-      setPermissionToDelete(null)
+  const confirmDeletePermission = async (): Promise<void> => {
+    if (permissionToDelete?.id) {
+      try {
+        await permissionHooks.deletePermission(permissionToDelete.id)
+        // 삭제 성공 시 목록 새로고침
+        await fetchPermissions({
+          page: pagination.currentPage,
+          limit: pagination.limit,
+          sortBy: pagination.sortBy,
+          sortOrder: pagination.sortOrder,
+          ...currentFilters,
+        })
+        setDeleteConfirmOpen(false)
+        setPermissionToDelete(null)
+      } catch (error) {
+        console.error('권한 삭제 실패:', error)
+      }
     }
   }
 
@@ -187,39 +162,37 @@ export default function PermissionsPage(): JSX.Element {
   }
 
   const getServiceName = (serviceId: string): string => {
-    const service = mockServices.find(s => s.id === serviceId)
-    return service?.displayName || '알 수 없음'
+    const service = services.find(s => s.id === serviceId)
+    return service?.displayName || service?.name || '알 수 없음'
   }
 
   const getUsedRoleCount = (permissionId: string): number => {
-    return mockRolePermissions.filter(rp => rp.permissionId === permissionId).length
+    // 역할-권한 관계 조회 API 호출 필요
+    // 임시로 0 반환
+    return 0
   }
 
   const getUsedRoles = (permissionId: string): string[] => {
-    const roleIds = mockRolePermissions
-      .filter(rp => rp.permissionId === permissionId)
-      .map(rp => rp.roleId)
-    
-    return mockRoles
-      .filter(role => roleIds.includes(role.id))
-      .map(role => role.name)
+    // 역할-권한 관계 조회 API 호출 필요
+    // 임시로 빈 배열 반환
+    return []
   }
 
   // 유니크한 리소스 및 액션 타입 추출
   const getUniqueResources = (): string[] => {
     const resources = new Set<string>()
-    mockPermissions.forEach(permission => {
+    permissions.forEach(permission => {
       const [resource] = permission.action.split(':')
-      resources.add(resource)
+      if (resource) resources.add(resource)
     })
     return Array.from(resources)
   }
 
   const getUniqueActionTypes = (): string[] => {
     const actionTypes = new Set<string>()
-    mockPermissions.forEach(permission => {
+    permissions.forEach(permission => {
       const [, actionType] = permission.action.split(':')
-      actionTypes.add(actionType)
+      if (actionType) actionTypes.add(actionType)
     })
     return Array.from(actionTypes)
   }
@@ -242,7 +215,7 @@ export default function PermissionsPage(): JSX.Element {
       key: 'serviceId',
       label: '서비스',
       type: 'select' as const,
-      options: mockServices.map(service => ({
+      options: services.map(service => ({
         value: service.id,
         label: service.displayName || service.name
       }))
@@ -269,24 +242,24 @@ export default function PermissionsPage(): JSX.Element {
 
   const columns = [
     { 
-      key: 'action' as keyof Permission, 
+      key: 'action' as keyof PermissionSearchResult, 
       label: '권한', 
       sortable: true,
-      render: (value: Permission[keyof Permission]) => formatAction(String(value))
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) => formatAction(String(value))
     },
-    { key: 'description' as keyof Permission, label: '설명', sortable: false },
+    { key: 'description' as keyof PermissionSearchResult, label: '설명', sortable: false },
     { 
-      key: 'serviceId' as keyof Permission, 
+      key: 'serviceId' as keyof PermissionSearchResult, 
       label: '서비스',
       sortable: false,
-      render: (value: Permission[keyof Permission]) => getServiceName(String(value))
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) => getServiceName(String(value))
     },
     { 
-      key: 'usedRoles' as keyof Permission, 
+      key: 'usedRoles' as keyof PermissionSearchResult, 
       label: '사용중인 역할',
       sortable: false,
-      render: (value: Permission[keyof Permission], row: Permission) => {
-        const roleCount = getUsedRoleCount(row.id)
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult], row: PermissionSearchResult) => {
+        const roleCount = getUsedRoleCount(row.id || '')
         return (
           <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-sm w-fit">
             {roleCount}개
@@ -295,10 +268,10 @@ export default function PermissionsPage(): JSX.Element {
       }
     },
     {
-      key: 'actions' as keyof Permission,
+      key: 'actions' as keyof PermissionSearchResult,
       label: '작업',
       sortable: false,
-      render: (value: Permission[keyof Permission], row: Permission) => (
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult], row: PermissionSearchResult) => (
         <div className="flex justify-center space-x-2">
           <Button size="sm" variant="outline" onClick={() => handleOpenDetailModal(row)}>
             상세보기
@@ -425,9 +398,27 @@ export default function PermissionsPage(): JSX.Element {
           isOpen={isModalOpen}
           onClose={handleCloseModal}
           permission={selectedPermission}
-          onSubmit={(data) => {
-            console.log('Permission form submitted:', data)
-            handleCloseModal()
+          onSubmit={async (data) => {
+            try {
+              if (selectedPermission?.id) {
+                // 수정
+                await permissionHooks.updatePermission(selectedPermission.id, data)
+              } else {
+                // 생성
+                await permissionHooks.createPermission(data)
+              }
+              // 성공 시 목록 새로고침
+              await fetchPermissions({
+                page: pagination.currentPage,
+                limit: pagination.limit,
+                sortBy: pagination.sortBy,
+                sortOrder: pagination.sortOrder,
+                ...currentFilters,
+              })
+              handleCloseModal()
+            } catch (error) {
+              console.error('권한 저장 실패:', error)
+            }
           }}
         />
 
@@ -445,14 +436,14 @@ export default function PermissionsPage(): JSX.Element {
           fields={[
             { 
               label: 'ID', 
-              value: selectedPermission?.id,
+              value: permissionDetail?.id || selectedPermission?.id,
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
               </svg>
             },
             { 
               label: '권한 액션', 
-              value: selectedPermission ? formatAction(selectedPermission.action) : null,
+              value: permissionDetail ? formatAction(permissionDetail.action) : selectedPermission ? formatAction(selectedPermission.action) : null,
               type: 'component',
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -461,7 +452,7 @@ export default function PermissionsPage(): JSX.Element {
             },
             { 
               label: '설명', 
-              value: selectedPermission?.description,
+              value: permissionDetail?.description || selectedPermission?.description,
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
               </svg>,
@@ -469,7 +460,7 @@ export default function PermissionsPage(): JSX.Element {
             },
             { 
               label: '서비스', 
-              value: selectedPermission ? getServiceName(selectedPermission.serviceId) : null,
+              value: permissionDetail ? getServiceName(permissionDetail.service?.id || '') : selectedPermission ? getServiceName(selectedPermission.serviceId || '') : null,
               type: 'badge',
               badgeColor: 'blue',
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -478,27 +469,11 @@ export default function PermissionsPage(): JSX.Element {
             },
             { 
               label: '사용중인 역할', 
-              value: selectedPermission ? `${getUsedRoleCount(selectedPermission.id)}개` : null,
+              value: permissionDetail ? `${permissionDetail.roles?.length || 0}개` : selectedPermission ? `${getUsedRoleCount(selectedPermission.id || '')}개` : null,
               type: 'badge',
               badgeColor: 'green',
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            },
-            { 
-              label: '생성일', 
-              value: selectedPermission ? formatDate(selectedPermission.createdAt) : null,
-              type: 'date',
-              icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            },
-            { 
-              label: '수정일', 
-              value: selectedPermission ? formatDate(selectedPermission.updatedAt) : null,
-              type: 'date',
-              icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             }
           ]}
@@ -535,7 +510,7 @@ export default function PermissionsPage(): JSX.Element {
               </div>
             </div>
             
-            {permissionToDelete && getUsedRoleCount(permissionToDelete.id) > 0 && (
+            {permissionToDelete && getUsedRoleCount(permissionToDelete.id || '') > 0 && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
                 <div className="flex">
                   <div className="flex-shrink-0">
@@ -545,10 +520,10 @@ export default function PermissionsPage(): JSX.Element {
                   </div>
                   <div className="ml-3">
                     <h3 className="text-sm font-medium text-yellow-800">
-                      현재 {getUsedRoleCount(permissionToDelete.id)}개 역할에서 사용중
+                      현재 {getUsedRoleCount(permissionToDelete.id || '')}개 역할에서 사용중
                     </h3>
                     <div className="mt-2 text-sm text-yellow-700">
-                      <p>사용중인 역할: {getUsedRoles(permissionToDelete.id).join(', ')}</p>
+                      <p>사용중인 역할: {getUsedRoles(permissionToDelete.id || '').join(', ')}</p>
                     </div>
                   </div>
                 </div>

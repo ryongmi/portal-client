@@ -17,10 +17,12 @@ import {
   LimitType,
 } from '@/types/api';
 import { usePagination } from '@/hooks/usePagination';
-import { mockUsers, mockRoles, mockUserRoles } from '@/data/mockData';
+import { UserService } from '@/services/userService';
+import type { UserSearchQuery, UserSearchResult, UserDetail } from '@krgeobuk/user';
+import type { PaginatedResult } from '@krgeobuk/core';
 
 export default function UsersPage(): JSX.Element {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [pageInfo, setPageInfo] = useState<PaginatedResultBase>({
     page: 1,
@@ -33,82 +35,22 @@ export default function UsersPage(): JSX.Element {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isRoleModalOpen, setIsRoleModalOpen] = useState<boolean>(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
+  const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
   const [currentFilters, setCurrentFilters] = useState<SearchFiltersType>({});
 
   const pagination = usePagination();
 
-  // Mock API 호출 함수
-  const fetchUsers = useCallback(async (params: any): Promise<void> => {
+  // API 호출 함수
+  const fetchUsers = useCallback(async (params: UserSearchQuery): Promise<void> => {
     setLoading(true);
     try {
-      // 최소 로딩 시간 보장 (UX 개선)
-      const minLoadingTime = new Promise((resolve) => setTimeout(resolve, 200));
-
-      // 필터링 로직
-      let filteredUsers = [...mockUsers];
-
-      if (params.email) {
-        filteredUsers = filteredUsers.filter((user) =>
-          user.email.toLowerCase().includes(params.email.toLowerCase())
-        );
-      }
-
-      if (params.name) {
-        filteredUsers = filteredUsers.filter((user) =>
-          user.name.toLowerCase().includes(params.name.toLowerCase())
-        );
-      }
-
-      if (params.isEmailVerified !== undefined) {
-        filteredUsers = filteredUsers.filter(
-          (user) => user.isEmailVerified === params.isEmailVerified
-        );
-      }
-
-      if (params.isIntegrated !== undefined) {
-        filteredUsers = filteredUsers.filter((user) => user.isIntegrated === params.isIntegrated);
-      }
-
-      // 정렬 로직
-      if (params.sortBy) {
-        filteredUsers.sort((a, b) => {
-          const aValue = a[params.sortBy as keyof User];
-          const bValue = b[params.sortBy as keyof User];
-
-          if (typeof aValue === 'string' && typeof bValue === 'string') {
-            return params.sortOrder === SortOrderType.ASC
-              ? aValue.localeCompare(bValue)
-              : bValue.localeCompare(aValue);
-          }
-
-          return params.sortOrder === SortOrderType.ASC
-            ? (aValue as any) - (bValue as any)
-            : (bValue as any) - (aValue as any);
-        });
-      }
-
-      // 페이징 로직
-      const totalItems = filteredUsers.length;
-      const totalPages = Math.ceil(totalItems / params.limit);
-      const startIndex = (params.page - 1) * params.limit;
-      const endIndex = startIndex + params.limit;
-      const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-
-      setUsers(paginatedUsers);
-      setPageInfo({
-        page: params.page,
-        limit: params.limit,
-        totalItems,
-        totalPages,
-        hasPreviousPage: params.page > 1,
-        hasNextPage: params.page < totalPages,
-      });
-
-      // 최소 로딩 시간 대기
-      await minLoadingTime;
+      const response = await UserService.getUsers(params);
+      
+      setUsers(response.data.items);
+      setPageInfo(response.data.pageInfo);
     } catch (error) {
-      console.error('Failed to fetch users:', error);
+      console.error('사용자 목록 조회 실패:', error);
     } finally {
       setLoading(false);
     }
@@ -122,9 +64,9 @@ export default function UsersPage(): JSX.Element {
       sortBy: 'createdAt',
       sortOrder: SortOrderType.DESC,
     });
-  }, []);
+  }, [fetchUsers]);
 
-  const handleOpenModal = (user?: User): void => {
+  const handleOpenModal = (user?: UserSearchResult): void => {
     setSelectedUser(user || null);
     setIsModalOpen(true);
   };
@@ -134,7 +76,7 @@ export default function UsersPage(): JSX.Element {
     setSelectedUser(null);
   };
 
-  const handleOpenRoleModal = (user: User): void => {
+  const handleOpenRoleModal = (user: UserSearchResult): void => {
     setSelectedUser(user);
     setIsRoleModalOpen(true);
   };
@@ -144,14 +86,23 @@ export default function UsersPage(): JSX.Element {
     setSelectedUser(null);
   };
 
-  const handleOpenDetailModal = (user: User): void => {
-    setSelectedUser(user);
-    setIsDetailModalOpen(true);
+  const handleOpenDetailModal = async (user: UserSearchResult): Promise<void> => {
+    try {
+      if (user.id) {
+        const response = await UserService.getUserById(user.id);
+        setUserDetail(response.data);
+        setSelectedUser(user);
+        setIsDetailModalOpen(true);
+      }
+    } catch (error) {
+      console.error('사용자 상세 정보 조회 실패:', error);
+    }
   };
 
   const handleCloseDetailModal = (): void => {
     setIsDetailModalOpen(false);
     setSelectedUser(null);
+    setUserDetail(null);
   };
 
   const formatDate = (dateString: string): string => {
@@ -229,27 +180,31 @@ export default function UsersPage(): JSX.Element {
   ];
 
   const columns = [
-    { key: 'email' as keyof User, label: '이메일', sortable: true },
-    { key: 'name' as keyof User, label: '이름', sortable: true },
-    { key: 'nickname' as keyof User, label: '닉네임', sortable: false },
+    { key: 'email' as keyof UserSearchResult, label: '이메일', sortable: true },
+    { key: 'name' as keyof UserSearchResult, label: '이름', sortable: true },
+    { key: 'nickname' as keyof UserSearchResult, label: '닉네임', sortable: false },
     {
-      key: 'isEmailVerified' as keyof User,
+      key: 'isEmailVerified' as keyof UserSearchResult,
       label: '상태',
       sortable: false,
-      render: (value: User[keyof User], row: User) =>
+      render: (value: UserSearchResult[keyof UserSearchResult], row: UserSearchResult) =>
         formatStatus(Boolean(value), Boolean(row.isIntegrated)),
     },
     {
-      key: 'id' as keyof User,
-      label: '역할',
+      key: 'id' as keyof UserSearchResult,
+      label: 'OAuth',
       sortable: false,
-      render: (value: User[keyof User], row: User) => formatUserRoleCount(row.id),
+      render: (value: UserSearchResult[keyof UserSearchResult], row: UserSearchResult) => (
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+          {row.oauthAccount?.provider || 'Homepage'}
+        </span>
+      ),
     },
     {
-      key: 'id' as keyof User,
+      key: 'id' as keyof UserSearchResult,
       label: '작업',
       sortable: false,
-      render: (value: User[keyof User], row: User) => (
+      render: (value: UserSearchResult[keyof UserSearchResult], row: UserSearchResult) => (
         <div className="flex justify-center space-x-2">
           <Button size="sm" variant="outline" onClick={() => handleOpenDetailModal(row)}>
             상세보기
@@ -712,7 +667,7 @@ export default function UsersPage(): JSX.Element {
           isOpen={isDetailModalOpen}
           onClose={handleCloseDetailModal}
           title="사용자 상세 정보"
-          subtitle={selectedUser?.email}
+          subtitle={userDetail?.email}
           headerIcon={
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -722,14 +677,14 @@ export default function UsersPage(): JSX.Element {
           fields={[
             { 
               label: 'ID', 
-              value: selectedUser?.id,
+              value: userDetail?.id,
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
               </svg>
             },
             { 
               label: '이메일', 
-              value: selectedUser?.email,
+              value: userDetail?.email,
               type: 'badge',
               badgeColor: 'blue',
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -738,21 +693,21 @@ export default function UsersPage(): JSX.Element {
             },
             { 
               label: '이름', 
-              value: selectedUser?.name,
+              value: userDetail?.name,
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             },
             { 
               label: '닉네임', 
-              value: selectedUser?.nickname || '설정되지 않음',
+              value: userDetail?.nickname || '설정되지 않음',
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
               </svg>
             },
             { 
               label: '프로필 이미지', 
-              value: selectedUser?.profileImageUrl || '설정되지 않음',
+              value: userDetail?.profileImageUrl || '설정되지 않음',
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>,
@@ -760,38 +715,39 @@ export default function UsersPage(): JSX.Element {
             },
             { 
               label: '이메일 인증 상태', 
-              value: selectedUser ? (selectedUser.isEmailVerified ? '인증됨' : '미인증') : null,
+              value: userDetail ? (userDetail.isEmailVerified ? '인증됨' : '미인증') : null,
               type: 'badge',
-              badgeColor: selectedUser?.isEmailVerified ? 'green' : 'red',
+              badgeColor: userDetail?.isEmailVerified ? 'green' : 'red',
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             },
             { 
               label: '통합 상태', 
-              value: selectedUser ? (selectedUser.isIntegrated ? '통합됨' : '미통합') : null,
+              value: userDetail ? (userDetail.isIntegrated ? '통합됨' : '미통합') : null,
               type: 'badge',
-              badgeColor: selectedUser?.isIntegrated ? 'green' : 'yellow',
+              badgeColor: userDetail?.isIntegrated ? 'green' : 'yellow',
+              icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            },
+            { 
+              label: 'OAuth 제공자', 
+              value: userDetail?.oauthAccount?.provider || 'Homepage',
+              type: 'badge',
+              badgeColor: 'gray',
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
               </svg>
             },
             { 
               label: '전체 상태', 
-              value: selectedUser ? formatStatus(selectedUser.isEmailVerified, selectedUser.isIntegrated) : null,
+              value: userDetail ? formatStatus(userDetail.isEmailVerified, userDetail.isIntegrated) : null,
               type: 'component',
               icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-            },
-            { 
-              label: '할당된 역할', 
-              value: selectedUser ? `${getUserRoles(selectedUser.id).length}개` : null,
-              type: 'badge',
-              badgeColor: 'purple',
-              icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
+            }
             },
             { 
               label: '생성일', 

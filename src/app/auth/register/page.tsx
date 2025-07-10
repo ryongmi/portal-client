@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
 
 export default function RegisterPage(): JSX.Element {
   const [formData, setFormData] = useState({
@@ -16,6 +17,7 @@ export default function RegisterPage(): JSX.Element {
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const router = useRouter()
+  const { signup } = useAuth()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target
@@ -81,13 +83,24 @@ export default function RegisterPage(): JSX.Element {
     setIsLoading(true)
     
     try {
-      // 실제 API 호출 시뮬레이션
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      // 실제 API 호출
+      await signup({
+        email: formData.email,
+        password: formData.password,
+        name: formData.name,
+        nickname: formData.nickname || undefined,
+      })
       
-      // 회원가입 성공 시 로그인 페이지로 이동
-      router.push('/auth/login')
-    } catch (error) {
-      setErrors({ submit: '회원가입에 실패했습니다. 다시 시도해주세요.' })
+      // 회원가입 성공 시 메인 페이지로 이동 (자동 로그인)
+      router.push('/')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error && 'response' in error 
+        ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
+        : undefined
+      
+      setErrors({ 
+        submit: errorMessage || '회원가입에 실패했습니다. 다시 시도해주세요.' 
+      })
     } finally {
       setIsLoading(false)
     }
