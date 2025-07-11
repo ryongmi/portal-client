@@ -47,7 +47,8 @@ export function useRoles() {
       const response = await RoleService.getRoleById(id);
       return response.data;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '역할 상세 정보 조회에 실패했습니다.';
+      const errorMessage =
+        err instanceof Error ? err.message : '역할 상세 정보 조회에 실패했습니다.';
       setError(errorMessage);
       throw err;
     } finally {
@@ -142,19 +143,22 @@ export function useRoles() {
     }
   }, []);
 
-  const assignMultiplePermissionsToRole = useCallback(async (roleId: string, permissionIds: string[]) => {
-    setLoading(true);
-    setError(null);
-    try {
-      await RolePermissionService.assignMultiplePermissionsToRole(roleId, permissionIds);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '여러 권한 할당에 실패했습니다.';
-      setError(errorMessage);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const assignMultiplePermissionsToRole = useCallback(
+    async (roleId: string, permissionIds: string[]) => {
+      setLoading(true);
+      setError(null);
+      try {
+        await RolePermissionService.assignMultiplePermissionsToRole(roleId, permissionIds);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : '여러 권한 할당에 실패했습니다.';
+        setError(errorMessage);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   return {
     roles,
