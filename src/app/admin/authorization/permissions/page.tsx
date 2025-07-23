@@ -1,546 +1,577 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback } from 'react'
-import Layout from '@/components/layout/Layout'
-import Table from '@/components/common/Table'
-import Button from '@/components/common/Button'
-import DetailModal from '@/components/common/DetailModal'
-import EnhancedDetailModal from '@/components/common/EnhancedDetailModal'
-import Modal from '@/components/common/Modal'
-import Pagination from '@/components/common/Pagination'
-import SearchFilters from '@/components/common/SearchFilters'
-import PermissionForm from '@/components/forms/PermissionForm'
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
-  PaginatedResultBase,
-  SearchFilters as SearchFiltersType,
-  SortOrderType,
-  LimitType,
-} from '@/types/api'
-import { usePagination } from '@/hooks/usePagination'
-import { usePermissions } from '@/hooks/usePermissions'
-import type { PermissionSearchQuery, PermissionSearchResult, PermissionDetail } from '@krgeobuk/permission'
-import type { Service } from '@krgeobuk/service'
+  fetchPermissions,
+  fetchPermissionById,
+  createPermission,
+  updatePermission,
+  deletePermission,
+  setSelectedPermission,
+  clearError,
+} from '@/store/slices/permissionSlice';
+import { fetchServices } from '@/store/slices/serviceSlice';
+import Layout from '@/components/layout/Layout';
+import AuthGuard from '@/components/auth/AuthGuard';
+import Table from '@/components/common/Table';
+import Button from '@/components/common/Button';
+import Modal from '@/components/common/Modal';
+import Pagination from '@/components/common/Pagination';
+import LoadingButton from '@/components/common/LoadingButton';
+import LoadingOverlay from '@/components/common/LoadingOverlay';
+import { TableRowSkeleton } from '@/components/common/SkeletonLoader';
+import FormField, { Input, Textarea, Select } from '@/components/common/FormField';
+import { ApiErrorMessage } from '@/components/common/ErrorMessage';
+import { useLoadingState } from '@/hooks/useLoadingState';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { validationRules, mapServerErrorsToFormErrors } from '@/utils/formValidation';
+import { toast } from '@/components/common/ToastContainer';
+import type {
+  PermissionDetail,
+  PermissionSearchResult,
+  PermissionSearchQuery,
+  CreatePermissionRequest,
+  UpdatePermissionRequest,
+} from '@/types';
+import { SortOrderType } from '@/types/api';
 
-export default function PermissionsPage(): JSX.Element {
-  const [permissions, setPermissions] = useState<PermissionSearchResult[]>([])
-  const [loading, setLoading] = useState<boolean>(false)
-  const [pageInfo, setPageInfo] = useState<PaginatedResultBase>({
-    page: 1,
-    limit: LimitType.THIRTY,
-    totalItems: 0,
-    totalPages: 0,
-    hasPreviousPage: false,
-    hasNextPage: false,
-  })
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false)
-  const [selectedPermission, setSelectedPermission] = useState<PermissionSearchResult | null>(null)
-  const [permissionDetail, setPermissionDetail] = useState<PermissionDetail | null>(null)
-  const [currentFilters, setCurrentFilters] = useState<SearchFiltersType>({})
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false)
-  const [permissionToDelete, setPermissionToDelete] = useState<PermissionSearchResult | null>(null)
-  const [services, setServices] = useState<Service[]>([])
+// 폼 데이터 타입 정의
+type PermissionFormData = {
+  action: string;
+  description: string;
+  serviceId: string;
+};
 
-  const pagination = usePagination()
-  const permissionHooks = usePermissions()
+export default function ReduxPermissionsPage(): JSX.Element {
+  const dispatch = useAppDispatch();
+  const { permissions, selectedPermission, isLoading, error, pagination } = useAppSelector(
+    (state) => state.permission
+  );
+  const { services } = useAppSelector((state) => state.service);
 
-  // API 호출 함수
-  const fetchPermissions = useCallback(
-    async (params: PermissionSearchQuery): Promise<void> => {
-      setLoading(true)
-      try {
-        const response = await permissionHooks.fetchPermissions(params)
-        setPermissions(response.items)
-        setPageInfo(response.pageInfo)
-      } catch (error) {
-        console.error('권한 목록 조회 실패:', error)
-      } finally {
-        setLoading(false)
-      }
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<PermissionSearchQuery>({});
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // 로딩 상태 관리
+  const { isLoading: isActionsLoading, withLoading } = useLoadingState();
+
+  // 에러 핸들러
+  const { handleApiError } = useErrorHandler();
+
+  // React Hook Form 설정
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    setError,
+    watch,
+  } = useForm<PermissionFormData>({
+    defaultValues: {
+      action: '',
+      description: '',
+      serviceId: '',
     },
-    [permissionHooks]
-  )
-
-  // 서비스 목록 조회 (필터링용)
-  const fetchServices = useCallback(async (): Promise<void> => {
-    try {
-      // 서비스 목록 조회 API 호출 (임시로 빈 배열)
-      // const response = await ServiceService.getServices()
-      // setServices(response.data.items)
-      setServices([]) // 임시
-    } catch (error) {
-      console.error('서비스 목록 조회 실패:', error)
-    }
-  }, [])
+    mode: 'onChange',
+  });
 
   // 초기 데이터 로드
   useEffect(() => {
-    fetchPermissions({
-      page: 1,
-      limit: LimitType.THIRTY,
-      sortBy: 'action',
-      sortOrder: SortOrderType.ASC,
-    })
-    fetchServices()
-  }, [fetchPermissions, fetchServices])
+    dispatch(fetchPermissions({}));
+    dispatch(fetchServices({}));
+  }, [dispatch]);
 
-  const handleOpenModal = (permission?: PermissionSearchResult): void => {
-    setSelectedPermission(permission || null)
-    setIsModalOpen(true)
-  }
+  // 에러 처리
+  useEffect(() => {
+    if (error) {
+      console.error('Error:', error);
+      setTimeout(() => dispatch(clearError()), 5000);
+    }
+  }, [error, dispatch]);
 
-  const handleCloseModal = (): void => {
-    setIsModalOpen(false)
-    setSelectedPermission(null)
-  }
+  // 검색 처리
+  const handleSearch = (query: PermissionSearchQuery) => {
+    setSearchQuery(query);
+    dispatch(fetchPermissions(query));
+  };
 
-  const handleOpenDetailModal = async (permission: PermissionSearchResult): Promise<void> => {
+  // 페이지 변경 처리
+  const handlePageChange = (page: number) => {
+    dispatch(fetchPermissions({ ...searchQuery, page }));
+  };
+
+  // 모달 열기
+  const handleOpenModal = async (permissionSearchResult?: PermissionSearchResult) => {
     try {
-      if (permission.id) {
-        const detail = await permissionHooks.getPermissionById(permission.id)
-        setPermissionDetail(detail)
-        setSelectedPermission(permission)
-        setIsDetailModalOpen(true)
+      if (permissionSearchResult) {
+        // 상세 데이터 API 호출
+        const fullPermissionData: PermissionDetail = await dispatch(
+          fetchPermissionById(permissionSearchResult.id)
+        ).unwrap();
+
+        // 전체 데이터로 폼 초기화
+        reset({
+          action: fullPermissionData.action || '',
+          description: fullPermissionData.description || '',
+          serviceId: fullPermissionData.service?.id || '',
+        });
+      } else {
+        dispatch(setSelectedPermission(null));
+        reset({
+          action: '',
+          description: '',
+          serviceId: '',
+        });
       }
+      setFormError(null);
+      setIsModalOpen(true);
     } catch (error) {
-      console.error('권한 상세 정보 조회 실패:', error)
+      handleApiError(error);
     }
-  }
+  };
 
-  const handleCloseDetailModal = (): void => {
-    setIsDetailModalOpen(false)
-    setSelectedPermission(null)
-    setPermissionDetail(null)
-  }
+  // 모달 닫기
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    dispatch(setSelectedPermission(null));
+    setFormError(null);
+    reset();
+  };
 
-  const handleDeletePermission = (permission: PermissionSearchResult): void => {
-    setPermissionToDelete(permission)
-    setDeleteConfirmOpen(true)
-  }
-
-  const confirmDeletePermission = async (): Promise<void> => {
-    if (permissionToDelete?.id) {
+  // 권한 저장
+  const onSubmit = withLoading(
+    'save',
+    async (data: { action: string; description: string; serviceId: string }) => {
       try {
-        await permissionHooks.deletePermission(permissionToDelete.id)
-        // 삭제 성공 시 목록 새로고침
-        await fetchPermissions({
-          page: pagination.currentPage,
-          limit: pagination.limit,
-          sortBy: pagination.sortBy,
-          sortOrder: pagination.sortOrder,
-          ...currentFilters,
-        })
-        setDeleteConfirmOpen(false)
-        setPermissionToDelete(null)
-      } catch (error) {
-        console.error('권한 삭제 실패:', error)
+        setFormError(null);
+
+        if (selectedPermission && selectedPermission.id) {
+          const updateData: UpdatePermissionRequest = {
+            action: data.action,
+            description: data.description,
+          };
+          await dispatch(
+            updatePermission({ permissionId: selectedPermission.id, permissionData: updateData })
+          ).unwrap();
+
+          toast.success('권한 수정 완료', '권한이 성공적으로 수정되었습니다.');
+        } else {
+          const createData: CreatePermissionRequest = {
+            action: data.action,
+            description: data.description,
+            serviceId: data.serviceId,
+          };
+          await dispatch(createPermission(createData)).unwrap();
+
+          toast.success('권한 생성 완료', '새 권한이 성공적으로 생성되었습니다.');
+        }
+
+        handleCloseModal();
+        dispatch(fetchPermissions(searchQuery));
+      } catch (error: unknown) {
+        // 서버 에러를 폼 에러로 매핑
+        const formErrors = mapServerErrorsToFormErrors(
+          (error as any)?.response?.data?.errors
+        );
+
+        // 각 필드별 에러 설정
+        Object.keys(formErrors).forEach((field) => {
+          if (field === 'action' || field === 'description' || field === 'serviceId') {
+            const errorMessage = formErrors[field];
+            if (errorMessage) {
+              const message =
+                typeof errorMessage === 'string'
+                  ? errorMessage
+                  : errorMessage.message || 'Invalid input';
+              setError(field as keyof typeof data, { type: 'server', message });
+            }
+          }
+        });
+
+        // 일반적인 에러 메시지 설정
+        const errorMessage = handleApiError(error, { showToast: false });
+        setFormError(errorMessage);
       }
     }
-  }
+  );
+
+  // 삭제 모달 열기
+  const handleOpenDeleteModal = async (permissionSearchResult: PermissionSearchResult) => {
+    try {
+      // 상세 데이터 API 호출
+      await dispatch(fetchPermissionById(permissionSearchResult.id)).unwrap();
+      setIsDeleteModalOpen(true);
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
+
+  // 삭제 모달 닫기
+  const handleCloseDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    dispatch(setSelectedPermission(null));
+  };
+
+  // 권한 삭제
+  const handleDeletePermission = withLoading('delete', async () => {
+    if (selectedPermission && selectedPermission.id) {
+      try {
+        await dispatch(deletePermission(selectedPermission.id)).unwrap();
+        toast.success('권한 삭제 완료', '권한이 성공적으로 삭제되었습니다.');
+        handleCloseDeleteModal();
+        dispatch(fetchPermissions(searchQuery));
+      } catch (error) {
+        handleApiError(error);
+      }
+    }
+  });
+
+  // 서비스 이름 가져오기
+  const getServiceName = (serviceId: string) => {
+    const service = services.find((s) => s.id === serviceId);
+    return service?.name || '알 수 없음';
+  };
+
+  // 액션 타입에 따른 배지 색상
+  const getActionBadgeColor = (action: string) => {
+    if (action.endsWith('.read')) return 'bg-blue-100 text-blue-800';
+    if (action.endsWith('.write')) return 'bg-green-100 text-green-800';
+    if (action.endsWith('.update')) return 'bg-yellow-100 text-yellow-800';
+    if (action.endsWith('.delete')) return 'bg-red-100 text-red-800';
+    return 'bg-gray-100 text-gray-800';
+  };
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('ko-KR')
-  }
-
-  const formatAction = (action: string): JSX.Element => {
-    const [resource, actionType] = action.split(':')
-    const actionColors = {
-      read: 'bg-blue-100 text-blue-800',
-      write: 'bg-green-100 text-green-800',
-      delete: 'bg-red-100 text-red-800',
-      create: 'bg-purple-100 text-purple-800'
-    }
-    
-    return (
-      <div className="flex flex-col">
-        <span className="font-medium">{resource}</span>
-        <span className={`px-2 py-1 text-xs font-medium rounded-full inline-block mt-1 ${actionColors[actionType as keyof typeof actionColors] || 'bg-gray-100 text-gray-800'}`}>
-          {actionType}
-        </span>
-      </div>
-    )
-  }
-
-  const getServiceName = (serviceId: string): string => {
-    const service = services.find(s => s.id === serviceId)
-    return service?.displayName || service?.name || '알 수 없음'
-  }
-
-  const getUsedRoleCount = (permissionId: string): number => {
-    // 역할-권한 관계 조회 API 호출 필요
-    // 임시로 0 반환
-    return 0
-  }
-
-  const getUsedRoles = (permissionId: string): string[] => {
-    // 역할-권한 관계 조회 API 호출 필요
-    // 임시로 빈 배열 반환
-    return []
-  }
-
-  // 유니크한 리소스 및 액션 타입 추출
-  const getUniqueResources = (): string[] => {
-    const resources = new Set<string>()
-    permissions.forEach(permission => {
-      const [resource] = permission.action.split(':')
-      if (resource) resources.add(resource)
-    })
-    return Array.from(resources)
-  }
-
-  const getUniqueActionTypes = (): string[] => {
-    const actionTypes = new Set<string>()
-    permissions.forEach(permission => {
-      const [, actionType] = permission.action.split(':')
-      if (actionType) actionTypes.add(actionType)
-    })
-    return Array.from(actionTypes)
-  }
-
-  // 검색 필터 필드 정의
-  const searchFields = [
-    {
-      key: 'action',
-      label: '권한 액션',
-      type: 'text' as const,
-      placeholder: '권한 액션을 입력하세요 (예: user:read)'
-    },
-    {
-      key: 'description',
-      label: '설명',
-      type: 'text' as const,
-      placeholder: '설명을 입력하세요'
-    },
-    {
-      key: 'serviceId',
-      label: '서비스',
-      type: 'select' as const,
-      options: services.map(service => ({
-        value: service.id,
-        label: service.displayName || service.name
-      }))
-    },
-    {
-      key: 'resource',
-      label: '리소스',
-      type: 'select' as const,
-      options: getUniqueResources().map(resource => ({
-        value: resource,
-        label: resource
-      }))
-    },
-    {
-      key: 'actionType',
-      label: '액션 타입',
-      type: 'select' as const,
-      options: getUniqueActionTypes().map(actionType => ({
-        value: actionType,
-        label: actionType
-      }))
-    }
-  ]
+    return new Date(dateString).toLocaleDateString('ko-KR');
+  };
 
   const columns = [
-    { 
-      key: 'action' as keyof PermissionSearchResult, 
-      label: '권한', 
+    {
+      key: 'action' as keyof PermissionSearchResult,
+      label: '액션',
       sortable: true,
-      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) => formatAction(String(value))
-    },
-    { key: 'description' as keyof PermissionSearchResult, label: '설명', sortable: false },
-    { 
-      key: 'serviceId' as keyof PermissionSearchResult, 
-      label: '서비스',
-      sortable: false,
-      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) => getServiceName(String(value))
-    },
-    { 
-      key: 'usedRoles' as keyof PermissionSearchResult, 
-      label: '사용중인 역할',
-      sortable: false,
-      render: (value: PermissionSearchResult[keyof PermissionSearchResult], row: PermissionSearchResult) => {
-        const roleCount = getUsedRoleCount(row.id || '')
-        return (
-          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-sm w-fit">
-            {roleCount}개
-          </span>
-        )
-      }
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) => (
+        <span
+          className={`px-2 py-1 text-xs font-medium rounded-full ${getActionBadgeColor(
+            value as string
+          )}`}
+        >
+          {value as string}
+        </span>
+      ),
     },
     {
-      key: 'actions' as keyof PermissionSearchResult,
+      key: 'description' as keyof PermissionSearchResult,
+      label: '설명',
+      sortable: false,
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) =>
+        String(value || '설명 없음'),
+    },
+    {
+      key: 'roleCount' as keyof PermissionSearchResult,
+      label: '역할 수',
+      sortable: false,
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) =>
+        String(`${value || 0}개`),
+    },
+    {
+      key: 'service' as keyof PermissionSearchResult,
+      label: '서비스',
+      sortable: false,
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) => {
+        const service = value as PermissionSearchResult['service'];
+        return (
+          <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
+            {service?.name || '알 수 없음'}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'id' as keyof PermissionSearchResult,
       label: '작업',
       sortable: false,
-      render: (value: PermissionSearchResult[keyof PermissionSearchResult], row: PermissionSearchResult) => (
+      render: (
+        value: PermissionSearchResult[keyof PermissionSearchResult],
+        row: PermissionSearchResult
+      ) => (
         <div className="flex justify-center space-x-2">
-          <Button size="sm" variant="outline" onClick={() => handleOpenDetailModal(row)}>
-            상세보기
-          </Button>
           <Button size="sm" variant="outline" onClick={() => handleOpenModal(row)}>
             수정
           </Button>
-          <Button size="sm" variant="danger" onClick={() => handleDeletePermission(row)}>
+          <LoadingButton
+            size="sm"
+            variant="outline"
+            onClick={() => handleOpenDeleteModal(row)}
+            isLoading={isActionsLoading('delete')}
+            loadingText="삭제 중"
+            className="text-red-600 border-red-300 hover:bg-red-50"
+          >
             삭제
-          </Button>
+          </LoadingButton>
         </div>
-      )
-    }
-  ]
+      ),
+    },
+  ];
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 text-white mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="bg-white/20 p-3 rounded-lg">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">권한 관리</h1>
-                <p className="text-white/80 mt-1">
-                  시스템 권한을 생성하고 관리합니다. 각 권한은 "resource:action" 형식으로 정의됩니다.
-                </p>
-              </div>
-            </div>
-            <Button 
-              variant="outline"
-              onClick={() => handleOpenModal()}
-              className="!bg-white !text-purple-700 hover:!bg-purple-50 hover:!text-purple-800 font-semibold px-6 py-2 rounded-lg transition-all hover:scale-105 shadow-lg border border-purple-200"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              새 권한 추가
-            </Button>
-          </div>
-        </div>
-
-        <SearchFilters
-          fields={searchFields}
-          onFiltersChange={useCallback((filters) => {
-            setCurrentFilters(filters);
-            const newParams = { 
-              page: 1, 
-              limit: pagination.limit, 
-              sortBy: pagination.sortBy, 
-              sortOrder: pagination.sortOrder,
-              ...filters 
-            };
-            pagination.goToPage(1);
-            fetchPermissions(newParams);
-          }, [pagination.limit, pagination.sortBy, pagination.sortOrder, pagination.goToPage, fetchPermissions])}
-          onReset={useCallback(() => {
-            setCurrentFilters({});
-            const newParams = { 
-              page: 1, 
-              limit: pagination.limit, 
-              sortBy: pagination.sortBy, 
-              sortOrder: pagination.sortOrder 
-            };
-            pagination.goToPage(1);
-            fetchPermissions(newParams);
-          }, [pagination.limit, pagination.sortBy, pagination.sortOrder, pagination.goToPage, fetchPermissions])}
-        />
-
-        <Table 
-          data={permissions} 
-          columns={columns} 
-          loading={loading}
-          sortBy={pagination.sortBy}
-          sortOrder={pagination.sortOrder}
-          onSort={(column) => {
-            const newSortOrder =
-              pagination.sortBy === column && pagination.sortOrder === SortOrderType.DESC
-                ? SortOrderType.ASC
-                : SortOrderType.DESC;
-            const newParams = {
-              page: 1,
-              limit: pagination.limit,
-              sortBy: column,
-              sortOrder: newSortOrder,
-              ...currentFilters
-            };
-            pagination.changeSort(column, newSortOrder);
-            fetchPermissions(newParams);
-          }}
-        />
-
-        <Pagination
-          pageInfo={pageInfo}
-          onPageChange={(page) => {
-            const newParams = {
-              page,
-              limit: pagination.limit,
-              sortBy: pagination.sortBy,
-              sortOrder: pagination.sortOrder,
-              ...currentFilters
-            };
-            pagination.goToPage(page);
-            fetchPermissions(newParams);
-          }}
-          onLimitChange={(limit) => {
-            const newParams = {
-              page: 1,
-              limit,
-              sortBy: pagination.sortBy,
-              sortOrder: pagination.sortOrder,
-              ...currentFilters
-            };
-            pagination.changeLimit(limit);
-            fetchPermissions(newParams);
-          }}
-        />
-
-        <PermissionForm
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          permission={selectedPermission}
-          onSubmit={async (data) => {
-            try {
-              if (selectedPermission?.id) {
-                // 수정
-                await permissionHooks.updatePermission(selectedPermission.id, data)
-              } else {
-                // 생성
-                await permissionHooks.createPermission(data)
-              }
-              // 성공 시 목록 새로고침
-              await fetchPermissions({
-                page: pagination.currentPage,
-                limit: pagination.limit,
-                sortBy: pagination.sortBy,
-                sortOrder: pagination.sortOrder,
-                ...currentFilters,
-              })
-              handleCloseModal()
-            } catch (error) {
-              console.error('권한 저장 실패:', error)
-            }
-          }}
-        />
-
-        <EnhancedDetailModal
-          isOpen={isDetailModalOpen}
-          onClose={handleCloseDetailModal}
-          title="권한 상세 정보"
-          subtitle={selectedPermission?.action}
-          headerIcon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          }
-          headerColor="blue"
-          fields={[
-            { 
-              label: 'ID', 
-              value: permissionDetail?.id || selectedPermission?.id,
-              icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
-              </svg>
-            },
-            { 
-              label: '권한 액션', 
-              value: permissionDetail ? formatAction(permissionDetail.action) : selectedPermission ? formatAction(selectedPermission.action) : null,
-              type: 'component',
-              icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>,
-              fullWidth: true
-            },
-            { 
-              label: '설명', 
-              value: permissionDetail?.description || selectedPermission?.description,
-              icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>,
-              fullWidth: true
-            },
-            { 
-              label: '서비스', 
-              value: permissionDetail ? getServiceName(permissionDetail.service?.id || '') : selectedPermission ? getServiceName(selectedPermission.serviceId || '') : null,
-              type: 'badge',
-              badgeColor: 'blue',
-              icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            },
-            { 
-              label: '사용중인 역할', 
-              value: permissionDetail ? `${permissionDetail.roles?.length || 0}개` : selectedPermission ? `${getUsedRoleCount(selectedPermission.id || '')}개` : null,
-              type: 'badge',
-              badgeColor: 'green',
-              icon: <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            }
-          ]}
-          onEdit={() => {
-            handleCloseDetailModal()
-            handleOpenModal(selectedPermission!)
-          }}
-          onDelete={() => {
-            handleCloseDetailModal()
-            if (selectedPermission) {
-              handleDeletePermission(selectedPermission)
-            }
-          }}
-        />
-
-        {/* 삭제 확인 모달 */}
-        <Modal
-          isOpen={deleteConfirmOpen}
-          onClose={() => setDeleteConfirmOpen(false)}
-          title="권한 삭제"
-        >
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
-                <svg className="h-10 w-10 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 18.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">권한을 삭제하시겠습니까?</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  <strong>{permissionToDelete?.action}</strong> 권한을 삭제하면 이 권한을 사용하는 모든 역할에서 제거됩니다.
-                </p>
-              </div>
-            </div>
-            
-            {permissionToDelete && getUsedRoleCount(permissionToDelete.id || '') > 0 && (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 18.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800">
-                      현재 {getUsedRoleCount(permissionToDelete.id || '')}개 역할에서 사용중
-                    </h3>
-                    <div className="mt-2 text-sm text-yellow-700">
-                      <p>사용중인 역할: {getUsedRoles(permissionToDelete.id || '').join(', ')}</p>
-                    </div>
-                  </div>
+    <AuthGuard>
+      <Layout>
+        <div className="space-y-6">
+          {/* 헤더 */}
+          <div className="bg-gradient-to-r from-green-500 to-teal-600 rounded-xl p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 p-3 rounded-lg">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">권한 관리 (Redux)</h1>
+                  <p className="text-white/80 mt-1">Redux를 사용한 권한 관리 시스템입니다.</p>
                 </div>
               </div>
-            )}
-            
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
-                취소
-              </Button>
-              <Button variant="danger" onClick={confirmDeletePermission}>
-                삭제
+              <Button
+                variant="outline"
+                onClick={() => handleOpenModal()}
+                className="!bg-white !text-green-700 hover:!bg-green-50"
+              >
+                새 권한 추가
               </Button>
             </div>
           </div>
-        </Modal>
-      </div>
-    </Layout>
-  )
+
+          {/* 에러 메시지 */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex">
+                <svg
+                  className="w-5 h-5 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <div className="ml-3">
+                  <p className="text-sm text-red-800">{error}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 검색 */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">액션</label>
+                <input
+                  type="text"
+                  placeholder="액션을 입력하세요 (예: user.read)"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onChange={(e) => handleSearch({ ...searchQuery, action: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">서비스</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onChange={(e) => handleSearch({ ...searchQuery, serviceId: e.target.value })}
+                >
+                  <option value="">모든 서비스</option>
+                  {services.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <Button onClick={() => handleSearch({})}>검색 초기화</Button>
+              </div>
+            </div>
+          </div>
+
+          {/* 테이블 */}
+          <LoadingOverlay isLoading={isLoading} text="권한 목록을 불러오는 중...">
+            {isLoading && permissions.length === 0 ? (
+              <div className="bg-white rounded-lg shadow space-y-4 p-6">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <TableRowSkeleton key={index} />
+                ))}
+              </div>
+            ) : (
+              <Table
+                data={permissions}
+                columns={columns}
+                loading={false}
+                sortBy="action"
+                sortOrder={SortOrderType.DESC}
+                onSort={(column) => {
+                  // Sort functionality placeholder
+                }}
+              />
+            )}
+          </LoadingOverlay>
+
+          {/* 페이지네이션 */}
+          <Pagination
+            pageInfo={pagination}
+            onPageChange={handlePageChange}
+            onLimitChange={(limit) => {
+              handleSearch({ ...searchQuery, limit });
+            }}
+          />
+
+          {/* 권한 생성/수정 모달 */}
+          <Modal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            title={selectedPermission ? '권한 수정' : '새 권한 추가'}
+            size="lg"
+          >
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* 일반적인 에러 메시지 */}
+              {formError && (
+                <ApiErrorMessage
+                  error={{ message: formError }}
+                  onDismiss={() => setFormError(null)}
+                />
+              )}
+
+              <FormField
+                label="액션"
+                required
+                {...(errors.action?.message && { error: errors.action.message })}
+                hint="일반적으로 리소스.액션 형태로 입력합니다. (예: user.read, role.write)"
+                className="pb-4"
+              >
+                <Input
+                  type="text"
+                  {...register('action', {
+                    required: '액션을 입력해주세요',
+                    pattern: {
+                      value: /^[a-zA-Z0-9_-]+:[a-zA-Z0-9_-]+$/,
+                      message: '액션은 "resource:action" 형식이어야 합니다',
+                    },
+                    minLength: {
+                      value: 3,
+                      message: '액션은 최소 3자 이상이어야 합니다',
+                    },
+                    maxLength: {
+                      value: 100,
+                      message: '액션은 최대 100자까지 입력 가능합니다',
+                    },
+                  })}
+                  required
+                  {...(errors.action?.message && { error: errors.action.message })}
+                  placeholder="예: user.read, user.write, user.delete"
+                />
+              </FormField>
+
+              <FormField
+                label="설명"
+                {...(errors.description?.message && { error: errors.description.message })}
+                hint="권한에 대한 상세한 설명을 입력하세요 (선택사항)"
+                className="pb-4"
+              >
+                <Textarea
+                  {...register('description', {
+                    maxLength: {
+                      value: 500,
+                      message: '설명은 최대 500자까지 입력 가능합니다',
+                    },
+                  })}
+                  {...(errors.description?.message && { error: errors.description.message })}
+                  rows={3}
+                  placeholder="권한에 대한 설명을 입력하세요 (선택사항)"
+                />
+              </FormField>
+
+              {!selectedPermission && (
+                <FormField
+                  label="서비스"
+                  required
+                  {...(errors.serviceId?.message && { error: errors.serviceId.message })}
+                  hint="이 권한이 속할 서비스를 선택하세요"
+                  className="pb-4"
+                >
+                  <Select
+                    {...register('serviceId', {
+                      required: '서비스를 선택해주세요',
+                    })}
+                    {...(errors.serviceId?.message && { error: errors.serviceId.message })}
+                    placeholder="서비스를 선택하세요"
+                    options={services.map((service) => ({
+                      value: service.id!,
+                      label: service?.name ?? '',
+                    }))}
+                  />
+                </FormField>
+              )}
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button type="button" variant="outline" onClick={handleCloseModal}>
+                  취소
+                </Button>
+                <LoadingButton
+                  type="submit"
+                  isLoading={isActionsLoading('save')}
+                  loadingText="저장 중..."
+                  disabled={isSubmitting}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {selectedPermission ? '수정' : '생성'}
+                </LoadingButton>
+              </div>
+            </form>
+          </Modal>
+
+          {/* 삭제 확인 모달 */}
+          <Modal
+            isOpen={isDeleteModalOpen}
+            onClose={handleCloseDeleteModal}
+            title="권한 삭제"
+            size="sm"
+          >
+            <div className="space-y-4">
+              <p className="text-gray-700">
+                정말로 <strong>{selectedPermission?.action}</strong> 권한을 삭제하시겠습니까?
+              </p>
+              <p className="text-sm text-red-600">이 작업은 되돌릴 수 없습니다.</p>
+              <div className="flex justify-end space-x-3">
+                <Button variant="outline" onClick={handleCloseDeleteModal}>
+                  취소
+                </Button>
+                <LoadingButton
+                  onClick={handleDeletePermission}
+                  isLoading={isActionsLoading('delete')}
+                  loadingText="삭제 중..."
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  삭제
+                </LoadingButton>
+              </div>
+            </div>
+          </Modal>
+        </div>
+      </Layout>
+    </AuthGuard>
+  );
 }
+

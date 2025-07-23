@@ -23,6 +23,9 @@ export default function Pagination({ pageInfo, onPageChange, onLimitChange }: Pa
     return pages
   }
 
+  const pageNumbers = generatePageNumbers()
+  const pageInfoText = `${(page - 1) * limit + 1}-${Math.min(page * limit, totalItems)} / ${totalItems}개`
+
   const handlePreviousPage = (): void => {
     if (hasPreviousPage) {
       onPageChange(page - 1)
@@ -40,48 +43,55 @@ export default function Pagination({ pageInfo, onPageChange, onLimitChange }: Pa
   }
 
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6">
+    <nav 
+      className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-6"
+      role="navigation"
+      aria-label="페이지네이션 내비게이션"
+    >
       {/* 페이지 정보 */}
-      <div className="flex items-center space-x-4 text-sm text-gray-600">
-        <span>
-          총 {totalItems.toLocaleString()}개 중 {((page - 1) * limit + 1).toLocaleString()}-{Math.min(page * limit, totalItems).toLocaleString()}개 표시
+      <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+        <span id="pagination-info">
+          {pageInfoText}
         </span>
         <div className="flex items-center space-x-2">
-          <label htmlFor="limit-select" className="text-sm text-gray-600">
+          <label htmlFor="limit-select" className="text-sm text-gray-600 dark:text-gray-400">
             페이지당:
           </label>
           <select
             id="limit-select"
             value={limit}
             onChange={handleLimitChange}
-            className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="border border-gray-300 rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"
+            aria-label="페이지당 표시할 항목 수 선택"
           >
-            <option value={LimitType.TEN}>10개</option>
-            <option value={LimitType.TWENTY}>20개</option>
+            <option value={LimitType.FIFTEEN}>15개</option>
             <option value={LimitType.THIRTY}>30개</option>
             <option value={LimitType.FIFTY}>50개</option>
-            <option value={LimitType.ONE_HUNDRED}>100개</option>
+            <option value={LimitType.HUNDRED}>100개</option>
           </select>
         </div>
       </div>
 
       {/* 페이지 네비게이션 */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2" role="group" aria-label="페이지 네비게이션">
         <Button
           size="sm"
           variant="outline"
           onClick={handlePreviousPage}
           disabled={!hasPreviousPage}
+          aria-label={`이전 페이지 (${page - 1}페이지)`}
         >
           이전
         </Button>
 
-        {generatePageNumbers().map((pageNumber) => (
+        {pageNumbers.map((pageNumber) => (
           <Button
             key={pageNumber}
             size="sm"
             variant={pageNumber === page ? 'primary' : 'outline'}
             onClick={() => onPageChange(pageNumber)}
+            aria-label={`${pageNumber}페이지${pageNumber === page ? ' (현재 페이지)' : ''}`}
+            aria-current={pageNumber === page ? 'page' : undefined}
           >
             {pageNumber}
           </Button>
@@ -92,10 +102,11 @@ export default function Pagination({ pageInfo, onPageChange, onLimitChange }: Pa
           variant="outline"
           onClick={handleNextPage}
           disabled={!hasNextPage}
+          aria-label={`다음 페이지 (${page + 1}페이지)`}
         >
           다음
         </Button>
       </div>
-    </div>
+    </nav>
   )
 }

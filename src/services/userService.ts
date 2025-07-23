@@ -1,5 +1,6 @@
 import { authApi } from "@/lib/axios";
 import type { ApiResponse } from "@/lib/axios";
+import type { UserProfile } from "@/types/api";
 
 // 공유 라이브러리 인터페이스 활용
 import type { 
@@ -34,10 +35,22 @@ export class UserService {
   }
 
   /**
-   * 현재 사용자 정보 조회
+   * 현재 사용자 정보 조회 (기본)
    */
   static async getMe(): Promise<ApiResponse<UserDetail>> {
     const response = await authApi.get<ApiResponse<UserDetail>>("/users/me");
+    return response.data;
+  }
+
+  /**
+   * 통합 사용자 프로필 조회
+   * - 기본 사용자 정보
+   * - OAuth 정보 (구글/네이버 인증 여부)
+   * - 권한 정보 (roles, permissions)
+   * - 사용 가능한 서비스 목록
+   */
+  static async getMyProfile(): Promise<ApiResponse<UserProfile>> {
+    const response = await authApi.get<ApiResponse<UserProfile>>("/users/me");
     return response.data;
   }
 

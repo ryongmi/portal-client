@@ -1,15 +1,14 @@
 import { authApi, tokenManager } from "@/lib/axios";
 import type { ApiResponse } from "@/lib/axios";
 
-// 공유 라이브러리 인터페이스 활용
+// 로컬 타입 사용
 import type { 
-  AuthLoginRequest, 
-  AuthLoginResponse, 
-  AuthSignupRequest, 
-  AuthRefreshResponse 
-} from "@krgeobuk/auth";
-import type { UserDetail } from "@krgeobuk/user";
-import type { LoggedInUser } from "@krgeobuk/shared";
+  LoginRequest as AuthLoginRequest, 
+  LoginResponse as AuthLoginResponse, 
+  SignupRequest as AuthSignupRequest, 
+  RefreshResponse as AuthRefreshResponse 
+} from "@/types";
+import type { User as UserDetail } from "@/types";
 
 // 타입 별칭 정의 (명확성을 위해)
 type LoginRequest = AuthLoginRequest;

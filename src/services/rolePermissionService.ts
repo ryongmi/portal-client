@@ -12,11 +12,11 @@ interface AssignPermissionToRoleRequest {
 
 export class RolePermissionService {
   /**
-   * 역할의 권한 목록 조회
+   * 역할의 권한 ID 목록 조회
    */
-  static async getRolePermissions(roleId: string): Promise<ApiResponse<PermissionDetail[]>> {
-    const response = await authzApi.get<ApiResponse<PermissionDetail[]>>(
-      `/role-permissions/roles/${roleId}`
+  static async getRolePermissions(roleId: string): Promise<ApiResponse<string[]>> {
+    const response = await authzApi.get<ApiResponse<string[]>>(
+      `/roles/${roleId}/permissions`
     );
     return response.data;
   }
@@ -25,11 +25,11 @@ export class RolePermissionService {
    * 역할에 권한 할당
    */
   static async assignPermissionToRole(
-    data: AssignPermissionToRoleRequest
+    roleId: string,
+    permissionId: string
   ): Promise<ApiResponse<null>> {
     const response = await authzApi.post<ApiResponse<null>>(
-      "/role-permissions",
-      data
+      `/roles/${roleId}/permissions/${permissionId}`
     );
     return response.data;
   }
@@ -42,36 +42,63 @@ export class RolePermissionService {
     permissionId: string
   ): Promise<ApiResponse<null>> {
     const response = await authzApi.delete<ApiResponse<null>>(
-      `/role-permissions/roles/${roleId}/permissions/${permissionId}`
+      `/roles/${roleId}/permissions/${permissionId}`
     );
     return response.data;
   }
 
   /**
-   * 벌크 권한 할당 (여러 권한을 한 번에 할당)
+   * 역할-권한 관계 존재 확인
+   */
+  static async checkRolePermissionExists(
+    roleId: string,
+    permissionId: string
+  ): Promise<ApiResponse<boolean>> {
+    const response = await authzApi.get<ApiResponse<boolean>>(
+      `/roles/${roleId}/permissions/${permissionId}/exists`
+    );
+    return response.data;
+  }
+
+  /**
+   * 역할에 여러 권한 할당 (배치)
    */
   static async assignMultiplePermissionsToRole(
     roleId: string,
     permissionIds: string[]
-  ): Promise<void> {
-    // 순차적으로 권한 할당 (백엔드에 벌크 API가 없는 경우)
-    const promises = permissionIds.map(permissionId =>
-      this.assignPermissionToRole({ roleId, permissionId })
+  ): Promise<ApiResponse<null>> {
+    const response = await authzApi.post<ApiResponse<null>>(
+      `/roles/${roleId}/permissions/batch`,
+      { permissionIds }
     );
-    await Promise.all(promises);
+    return response.data;
   }
 
   /**
-   * 벌크 권한 제거 (여러 권한을 한 번에 제거)
+   * 역할에서 여러 권한 해제 (배치)
    */
   static async removeMultiplePermissionsFromRole(
     roleId: string,
     permissionIds: string[]
-  ): Promise<void> {
-    // 순차적으로 권한 제거
-    const promises = permissionIds.map(permissionId =>
-      this.removePermissionFromRole(roleId, permissionId)
+  ): Promise<ApiResponse<null>> {
+    const response = await authzApi.delete<ApiResponse<null>>(
+      `/roles/${roleId}/permissions/batch`,
+      { data: { permissionIds } }
     );
-    await Promise.all(promises);
+    return response.data;
+  }
+
+  /**
+   * 역할 권한 완전 교체
+   */
+  static async replaceRolePermissions(
+    roleId: string,
+    permissionIds: string[]
+  ): Promise<ApiResponse<null>> {
+    const response = await authzApi.put<ApiResponse<null>>(
+      `/roles/${roleId}/permissions`,
+      { permissionIds }
+    );
+    return response.data;
   }
 }

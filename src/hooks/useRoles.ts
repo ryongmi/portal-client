@@ -105,7 +105,7 @@ export function useRoles() {
     setError(null);
     try {
       const response = await RolePermissionService.getRolePermissions(roleId);
-      return response.data;
+      return response.data || [];
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '역할 권한 조회에 실패했습니다.';
       setError(errorMessage);
@@ -119,7 +119,7 @@ export function useRoles() {
     setLoading(true);
     setError(null);
     try {
-      await RolePermissionService.assignPermissionToRole({ roleId, permissionId });
+      await RolePermissionService.assignPermissionToRole(roleId, permissionId);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '권한 할당에 실패했습니다.';
       setError(errorMessage);

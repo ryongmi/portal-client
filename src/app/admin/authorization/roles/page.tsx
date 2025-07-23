@@ -1,946 +1,632 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import {
+  fetchRoles,
+  fetchRoleById,
+  createRole,
+  updateRole,
+  deleteRole,
+  setSelectedRole,
+  clearError,
+} from '@/store/slices/roleSlice';
+import { fetchServices } from '@/store/slices/serviceSlice';
 import Layout from '@/components/layout/Layout';
+import AuthGuard from '@/components/auth/AuthGuard';
 import Table from '@/components/common/Table';
 import Button from '@/components/common/Button';
-import DetailModal from '@/components/common/DetailModal';
-import EnhancedDetailModal from '@/components/common/EnhancedDetailModal';
 import Modal from '@/components/common/Modal';
 import Pagination from '@/components/common/Pagination';
-import RoleForm from '@/components/forms/RoleForm';
-import SearchFilters from '@/components/common/SearchFilters';
-import { Role } from '@/types';
-import {
-  PaginatedResultBase,
-  SearchFilters as SearchFiltersType,
-  SortOrderType,
-  LimitType,
-} from '@/types/api';
-import { usePagination } from '@/hooks/usePagination';
-import { useRoles } from '@/hooks/useRoles';
-import type { RoleSearchQuery, RoleSearchResult, RoleDetail } from '@krgeobuk/role';
-import type { PermissionDetail } from '@krgeobuk/permission';
+import LoadingButton from '@/components/common/LoadingButton';
+import LoadingOverlay from '@/components/common/LoadingOverlay';
+import { TableRowSkeleton } from '@/components/common/SkeletonLoader';
+import FormField, { Input, Textarea, Select } from '@/components/common/FormField';
+import { ApiErrorMessage } from '@/components/common/ErrorMessage';
+import RolePermissionModal from '@/components/modals/RolePermissionModal';
+import { useLoadingState } from '@/hooks/useLoadingState';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { validationRules, mapServerErrorsToFormErrors } from '@/utils/formValidation';
+import { toast } from '@/components/common/ToastContainer';
+import type {
+  RoleDetail,
+  RoleSearchResult,
+  RoleSearchQuery,
+  CreateRoleRequest,
+  UpdateRoleRequest,
+} from '@/types';
+import { SortOrderType } from '@/types/api';
 
-export default function RolesPage(): JSX.Element {
-  const [roles, setRoles] = useState<RoleSearchResult[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [pageInfo, setPageInfo] = useState<PaginatedResultBase>({
-    page: 1,
-    limit: LimitType.THIRTY,
-    totalItems: 0,
-    totalPages: 0,
-    hasPreviousPage: false,
-    hasNextPage: false,
-  });
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState<boolean>(false);
-  const [selectedRole, setSelectedRole] = useState<RoleSearchResult | null>(null);
-  const [roleDetail, setRoleDetail] = useState<RoleDetail | null>(null);
-  const [rolePermissions, setRolePermissions] = useState<PermissionDetail[]>([]);
-  const [currentFilters, setCurrentFilters] = useState<SearchFiltersType>({});
-  const [permissionModalOpen, setPermissionModalOpen] = useState<boolean>(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState<boolean>(false);
-  const [roleToDelete, setRoleToDelete] = useState<RoleSearchResult | null>(null);
-
-  const pagination = usePagination();
-  const roleHooks = useRoles();
-
-  // API 호출 함수
-  const fetchRoles = useCallback(
-    async (params: RoleSearchQuery): Promise<void> => {
-      setLoading(true);
-      try {
-        const response = await roleHooks.fetchRoles(params);
-        setRoles(response.items);
-        setPageInfo(response.pageInfo);
-      } catch (error) {
-        console.error('역할 목록 조회 실패:', error);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [roleHooks]
+export default function ReduxRolesPage(): JSX.Element {
+  const dispatch = useAppDispatch();
+  const { roles, selectedRole, isLoading, error, pagination } = useAppSelector(
+    (state) => state.role
   );
+  const { services } = useAppSelector((state) => state.service);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<RoleSearchQuery>({});
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // 로딩 상태 관리
+  const { isLoading: isActionsLoading, withLoading } = useLoadingState();
+
+  // 에러 핸들러
+  const { handleApiError } = useErrorHandler();
+
+  // React Hook Form 설정
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+    setError,
+    watch,
+  } = useForm<{
+    name: string;
+    description?: string | null;
+    priority: number;
+    serviceId: string;
+  }>({
+    defaultValues: {
+      name: '',
+      description: '',
+      priority: 1,
+      serviceId: '',
+    },
+    mode: 'onChange',
+  });
 
   // 초기 데이터 로드
   useEffect(() => {
-    fetchRoles({
-      page: 1,
-      limit: LimitType.THIRTY,
-      sortBy: 'priority',
-      sortOrder: SortOrderType.ASC,
-    });
-  }, [fetchRoles]);
+    dispatch(fetchRoles({}));
+    dispatch(fetchServices({}));
+  }, [dispatch]);
 
-  const handleOpenModal = (role?: RoleSearchResult): void => {
-    setSelectedRole(role || null);
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = (): void => {
-    setIsModalOpen(false);
-    setSelectedRole(null);
-  };
-
-  const handleOpenDetailModal = async (role: RoleSearchResult): Promise<void> => {
-    try {
-      if (role.id) {
-        const detail = await roleHooks.getRoleById(role.id);
-        setRoleDetail(detail);
-        setSelectedRole(role);
-        setIsDetailModalOpen(true);
-      }
-    } catch (error) {
-      console.error('역할 상세 정보 조회 실패:', error);
+  // 에러 처리
+  useEffect(() => {
+    if (error) {
+      console.error('Error:', error);
+      setTimeout(() => dispatch(clearError()), 5000);
     }
-  };
+  }, [error, dispatch]);
 
-  const handleCloseDetailModal = (): void => {
-    setIsDetailModalOpen(false);
-    setSelectedRole(null);
-    setRoleDetail(null);
-  };
+  // 검색 처리 (useCallback으로 최적화)
+  const handleSearch = useCallback((query: RoleSearchQuery) => {
+    setSearchQuery(query);
+    dispatch(fetchRoles(query));
+  }, [dispatch]);
 
-  const handleOpenPermissionModal = async (role: RoleSearchResult): Promise<void> => {
+  // 페이지 변경 처리 (useCallback으로 최적화)
+  const handlePageChange = useCallback((page: number) => {
+    dispatch(fetchRoles({ ...searchQuery, page }));
+  }, [dispatch, searchQuery]);
+
+  // 모달 열기
+  const handleOpenModal = async (roleSearchResult?: RoleSearchResult) => {
     try {
-      if (role.id) {
-        const permissions = await roleHooks.getRolePermissions(role.id);
-        setRolePermissions(permissions);
-        setSelectedRole(role);
-        setPermissionModalOpen(true);
-      }
-    } catch (error) {
-      console.error('역할 권한 조회 실패:', error);
-    }
-  };
+      if (roleSearchResult) {
+        // 상세 데이터 API 호출
+        const fullRoleData: RoleDetail = await dispatch(
+          fetchRoleById(roleSearchResult.id)
+        ).unwrap();
 
-  const handleClosePermissionModal = (): void => {
-    setPermissionModalOpen(false);
-    setSelectedRole(null);
-    setRolePermissions([]);
-  };
-
-  const handleDeleteRole = (role: RoleSearchResult): void => {
-    setRoleToDelete(role);
-    setDeleteConfirmOpen(true);
-  };
-
-  const confirmDeleteRole = async (): Promise<void> => {
-    if (roleToDelete?.id) {
-      try {
-        await roleHooks.deleteRole(roleToDelete.id);
-        setDeleteConfirmOpen(false);
-        setRoleToDelete(null);
-        // 목록 새로고침
-        fetchRoles({
-          page: pagination.currentPage,
-          limit: pagination.limit,
-          sortBy: pagination.sortBy,
-          sortOrder: pagination.sortOrder,
-          ...currentFilters,
+        // 전체 데이터로 폼 초기화
+        reset({
+          name: fullRoleData.name,
+          description: fullRoleData.description || '',
+          priority: fullRoleData.priority || 1,
+          serviceId: fullRoleData.service?.id || '',
         });
-      } catch (error) {
-        console.error('역할 삭제 실패:', error);
+      } else {
+        dispatch(setSelectedRole(null));
+        reset({
+          name: '',
+          description: '',
+          priority: 1,
+          serviceId: '',
+        });
       }
+      setFormError(null);
+      setIsModalOpen(true);
+    } catch (error) {
+      handleApiError(error);
     }
   };
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('ko-KR');
+  // 모달 닫기 (useCallback으로 최적화)
+  const handleCloseModal = useCallback(() => {
+    setIsModalOpen(false);
+    dispatch(setSelectedRole(null));
+    setFormError(null);
+    reset();
+  }, [dispatch, reset]);
+
+  // 역할 저장
+  const onSubmit = withLoading(
+    'save',
+    async (data: { name: string; description?: string | null; priority: number; serviceId: string }) => {
+      try {
+        setFormError(null);
+
+        if (selectedRole) {
+          const updateData: UpdateRoleRequest = {
+            name: data.name,
+            priority: data.priority,
+            description: data.description && data.description.trim() ? data.description.trim() : null,
+          };
+          await dispatch(updateRole({ roleId: selectedRole.id!, roleData: updateData })).unwrap();
+
+          toast.success('역할 수정 완료', '역할이 성공적으로 수정되었습니다.');
+        } else {
+          const createData: CreateRoleRequest = {
+            name: data.name,
+            priority: data.priority,
+            serviceId: data.serviceId,
+            ...(data.description && data.description.trim() && { description: data.description.trim() }),
+          };
+          await dispatch(createRole(createData)).unwrap();
+
+          toast.success('역할 생성 완료', '새 역할이 성공적으로 생성되었습니다.');
+        }
+
+        handleCloseModal();
+        dispatch(fetchRoles(searchQuery));
+      } catch (error: unknown) {
+        // 서버 에러를 폼 에러로 매핑
+        const formErrors = mapServerErrorsToFormErrors(
+          (error as any)?.response?.data?.errors
+        );
+
+        // 각 필드별 에러 설정
+        Object.keys(formErrors).forEach((field) => {
+          if (
+            field === 'name' ||
+            field === 'description' ||
+            field === 'priority' ||
+            field === 'serviceId'
+          ) {
+            const errorMessage = formErrors[field];
+            if (errorMessage) {
+              const message =
+                typeof errorMessage === 'string'
+                  ? errorMessage
+                  : errorMessage.message || 'Invalid input';
+              setError(field as keyof typeof data, { type: 'server', message });
+            }
+          }
+        });
+
+        // 일반적인 에러 메시지 설정
+        const errorMessage = handleApiError(error, { showToast: false });
+        setFormError(errorMessage);
+      }
+    }
+  );
+
+  // 삭제 모달 열기
+  const handleOpenDeleteModal = async (roleSearchResult: RoleSearchResult) => {
+    try {
+      // 상세 데이터 API 호출
+      await dispatch(fetchRoleById(roleSearchResult.id)).unwrap();
+      setIsDeleteModalOpen(true);
+    } catch (error) {
+      handleApiError(error);
+    }
   };
 
-  const formatPriority = (priority: number): JSX.Element => {
-    const priorityColors = {
-      1: 'bg-red-100 text-red-800',
-      2: 'bg-orange-100 text-orange-800',
-      3: 'bg-yellow-100 text-yellow-800',
-      4: 'bg-lime-100 text-lime-800',
-      5: 'bg-green-100 text-green-800',
-      6: 'bg-teal-100 text-teal-800',
-      7: 'bg-blue-100 text-blue-800',
-      8: 'bg-indigo-100 text-indigo-800',
-      9: 'bg-gray-100 text-gray-800',
+  // 삭제 모달 닫기 (useCallback으로 최적화)
+  const handleCloseDeleteModal = useCallback(() => {
+    setIsDeleteModalOpen(false);
+    dispatch(setSelectedRole(null));
+  }, [dispatch]);
+
+  // 권한 관리 모달 열기
+  const handleOpenPermissionModal = async (roleSearchResult: RoleSearchResult) => {
+    try {
+      // 상세 데이터 API 호출
+      await dispatch(fetchRoleById(roleSearchResult.id)).unwrap();
+      setIsPermissionModalOpen(true);
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
+
+  // 권한 관리 모달 닫기 (useCallback으로 최적화)
+  const handleClosePermissionModal = useCallback(() => {
+    setIsPermissionModalOpen(false);
+    dispatch(setSelectedRole(null));
+  }, [dispatch]);
+
+  // 역할 삭제
+  const handleDeleteRole = withLoading('delete', async () => {
+    if (selectedRole) {
+      try {
+        await dispatch(deleteRole(selectedRole.id!)).unwrap();
+        toast.success('역할 삭제 완료', '역할이 성공적으로 삭제되었습니다.');
+        handleCloseDeleteModal();
+        dispatch(fetchRoles(searchQuery));
+      } catch (error) {
+        handleApiError(error);
+      }
+    }
+  });
+
+  // 서비스 이름 가져오기 (useMemo로 최적화)
+  const getServiceName = useMemo(() => {
+    return (serviceId: string) => {
+      const service = services.find((s) => s.id === serviceId);
+      return service?.name || '알 수 없음';
     };
+  }, [services]);
 
-    return (
-      <span
-        className={`px-2 py-1 text-xs font-medium rounded-full ${
-          priorityColors[priority as keyof typeof priorityColors] || 'bg-gray-100 text-gray-800'
-        }`}
-      >
-        {priority}
-      </span>
-    );
-  };
+  const formatDate = useCallback((dateString: string): string => {
+    return new Date(dateString).toLocaleDateString('ko-KR');
+  }, []);
 
-  // 검색 필터 필드 정의
-  const searchFields = [
+  // 테이블 컬럼 정의 (useMemo로 최적화)
+  const columns = useMemo(() => [
     {
-      key: 'name',
-      label: '역할 이름',
-      type: 'text' as const,
-      placeholder: '역할 이름을 입력하세요',
+      key: 'name' as keyof RoleSearchResult,
+      label: '역할명',
+      sortable: true,
     },
     {
-      key: 'serviceId',
-      label: '서비스',
-      type: 'select' as const,
-      options: [], // TODO: 서비스 목록을 가져와서 설정
-    },
-  ];
-
-  const columns = [
-    { key: 'name' as keyof RoleSearchResult, label: '역할 이름', sortable: true },
-    { key: 'description' as keyof RoleSearchResult, label: '설명', sortable: false },
-    {
-      key: 'service' as keyof RoleSearchResult,
-      label: '서비스',
+      key: 'description' as keyof RoleSearchResult,
+      label: '설명',
       sortable: false,
-      render: (value: RoleSearchResult[keyof RoleSearchResult], row: RoleSearchResult) =>
-        row.service?.displayName || row.service?.name || '알 수 없음',
+      render: (value: RoleSearchResult[keyof RoleSearchResult]) => String(value || '설명 없음'),
     },
     {
       key: 'priority' as keyof RoleSearchResult,
       label: '우선순위',
       sortable: true,
-      render: (value: RoleSearchResult[keyof RoleSearchResult]) => formatPriority(Number(value)),
     },
     {
       key: 'userCount' as keyof RoleSearchResult,
       label: '사용자 수',
       sortable: false,
-      render: (value: RoleSearchResult[keyof RoleSearchResult]) => (
-        <div className="flex justify-center">
-          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-            {value}명
-          </span>
-        </div>
-      ),
+      render: (value: RoleSearchResult[keyof RoleSearchResult]) => String(`${value || 0}명`),
     },
     {
-      key: 'actions' as keyof RoleSearchResult,
+      key: 'service' as keyof RoleSearchResult,
+      label: '서비스',
+      sortable: false,
+      render: (value: RoleSearchResult[keyof RoleSearchResult]) => {
+        const service = value as RoleSearchResult['service'];
+        return (
+          <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+            {service?.name || '알 수 없음'}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'id' as keyof RoleSearchResult,
       label: '작업',
       sortable: false,
       render: (value: RoleSearchResult[keyof RoleSearchResult], row: RoleSearchResult) => (
         <div className="flex justify-center space-x-2">
-          <Button size="sm" variant="outline" onClick={() => handleOpenDetailModal(row)}>
-            상세보기
-          </Button>
           <Button size="sm" variant="outline" onClick={() => handleOpenModal(row)}>
             수정
           </Button>
-          <Button size="sm" variant="outline" onClick={() => handleOpenPermissionModal(row)}>
-            권한 설정
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={() => handleOpenPermissionModal(row)}
+            className="text-blue-600 border-blue-300 hover:bg-blue-50"
+          >
+            권한 관리
           </Button>
-          <Button size="sm" variant="danger" onClick={() => handleDeleteRole(row)}>
+          <LoadingButton
+            size="sm"
+            variant="outline"
+            onClick={() => handleOpenDeleteModal(row)}
+            isLoading={isActionsLoading('delete')}
+            loadingText="삭제 중"
+            className="text-red-600 border-red-300 hover:bg-red-50"
+          >
             삭제
-          </Button>
+          </LoadingButton>
         </div>
       ),
     },
-  ];
+  ], [handleOpenModal, handleOpenPermissionModal, handleOpenDeleteModal, isActionsLoading]);
+
+  // 서비스 옵션 배열 메모이제이션
+  const serviceOptions = useMemo(() => 
+    services.map((service) => ({
+      value: service.id!,
+      label: service.name!,
+    })), [services]
+  );
 
   return (
-    <Layout>
-      <div className="space-y-6">
-        <div className="bg-gradient-to-r from-green-500 to-teal-600 rounded-xl p-6 text-white mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="bg-white/20 p-3 rounded-lg">
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold">역할 관리</h1>
-                <p className="text-white/80 mt-1">
-                  시스템 역할을 생성하고 관리합니다. 각 역할에 권한을 부여하여 접근 제어를 설정할 수
-                  있습니다.
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              onClick={() => handleOpenModal()}
-              className="!bg-white !text-green-700 hover:!bg-green-50 hover:!text-green-800 font-semibold px-6 py-2 rounded-lg transition-all hover:scale-105 shadow-lg border border-green-200"
-            >
-              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              새 역할 추가
-            </Button>
-          </div>
-        </div>
-
-        <SearchFilters
-          fields={searchFields}
-          onFiltersChange={useCallback(
-            (filters) => {
-              setCurrentFilters(filters);
-              const newParams = {
-                page: 1,
-                limit: pagination.limit,
-                sortBy: pagination.sortBy,
-                sortOrder: pagination.sortOrder,
-                ...filters,
-              };
-              pagination.goToPage(1);
-              fetchRoles(newParams);
-            },
-            [
-              pagination.limit,
-              pagination.sortBy,
-              pagination.sortOrder,
-              pagination.goToPage,
-              fetchRoles,
-            ]
-          )}
-          onReset={useCallback(() => {
-            setCurrentFilters({});
-            const newParams = {
-              page: 1,
-              limit: pagination.limit,
-              sortBy: pagination.sortBy,
-              sortOrder: pagination.sortOrder,
-            };
-            pagination.goToPage(1);
-            fetchRoles(newParams);
-          }, [
-            pagination.limit,
-            pagination.sortBy,
-            pagination.sortOrder,
-            pagination.goToPage,
-            fetchRoles,
-          ])}
-        />
-
-        <Table
-          data={roles}
-          columns={columns}
-          loading={loading}
-          sortBy={pagination.sortBy}
-          sortOrder={pagination.sortOrder}
-          onSort={(column) => {
-            const newSortOrder =
-              pagination.sortBy === column && pagination.sortOrder === SortOrderType.DESC
-                ? SortOrderType.ASC
-                : SortOrderType.DESC;
-            const newParams = {
-              page: 1,
-              limit: pagination.limit,
-              sortBy: column,
-              sortOrder: newSortOrder,
-              ...currentFilters,
-            };
-            pagination.changeSort(column, newSortOrder);
-            fetchRoles(newParams);
-          }}
-        />
-
-        <Pagination
-          pageInfo={pageInfo}
-          onPageChange={(page) => {
-            const newParams = {
-              page,
-              limit: pagination.limit,
-              sortBy: pagination.sortBy,
-              sortOrder: pagination.sortOrder,
-              ...currentFilters,
-            };
-            pagination.goToPage(page);
-            fetchRoles(newParams);
-          }}
-          onLimitChange={(limit) => {
-            const newParams = {
-              page: 1,
-              limit,
-              sortBy: pagination.sortBy,
-              sortOrder: pagination.sortOrder,
-              ...currentFilters,
-            };
-            pagination.changeLimit(limit);
-            fetchRoles(newParams);
-          }}
-        />
-
-        <RoleForm
-          isOpen={isModalOpen}
-          onClose={handleCloseModal}
-          role={selectedRole}
-          showPermissionTab={false}
-          onSubmit={(data) => {
-            console.log('Role form submitted:', data);
-            handleCloseModal();
-          }}
-          onPermissionUpdate={(roleId, permissions) => {
-            console.log('Permission updated for role:', roleId, permissions);
-          }}
-        />
-
-        <EnhancedDetailModal
-          isOpen={isDetailModalOpen}
-          onClose={handleCloseDetailModal}
-          title="역할 상세 정보"
-          subtitle={selectedRole?.name}
-          headerIcon={
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-          }
-          headerColor="green"
-          fields={[
-            {
-              label: 'ID',
-              value: selectedRole?.id,
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
-                  />
-                </svg>
-              ),
-            },
-            {
-              label: '역할 이름',
-              value: selectedRole?.name,
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
-              ),
-            },
-            {
-              label: '설명',
-              value: selectedRole?.description,
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                  />
-                </svg>
-              ),
-              fullWidth: true,
-            },
-            {
-              label: '서비스',
-              value: selectedRole ? getServiceName(selectedRole.serviceId) : null,
-              type: 'badge',
-              badgeColor: 'blue',
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
-              ),
-            },
-            {
-              label: '우선순위',
-              value: selectedRole ? formatPriority(selectedRole.priority || 5) : null,
-              type: 'component',
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                  />
-                </svg>
-              ),
-            },
-            {
-              label: '보유 권한',
-              value: selectedRole ? `${getRolePermissionCount(selectedRole.id)}개` : null,
-              type: 'badge',
-              badgeColor: 'purple',
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
-                </svg>
-              ),
-            },
-            {
-              label: '생성일',
-              value: selectedRole ? formatDate(selectedRole.createdAt) : null,
-              type: 'date',
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  />
-                </svg>
-              ),
-            },
-            {
-              label: '수정일',
-              value: selectedRole ? formatDate(selectedRole.updatedAt) : null,
-              type: 'date',
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
-              ),
-            },
-          ]}
-          onEdit={() => {
-            handleCloseDetailModal();
-            handleOpenModal(selectedRole!);
-          }}
-          onDelete={() => {
-            handleCloseDetailModal();
-            if (selectedRole) {
-              handleDeleteRole(selectedRole);
-            }
-          }}
-        />
-
-        {/* 권한 설정 모달 */}
-        <Modal isOpen={permissionModalOpen} onClose={handleClosePermissionModal} title="" size="lg">
-          <div className="relative -mx-6 -mt-6">
-            {/* 헤더 */}
-            <div className="bg-gradient-to-r from-green-500 to-teal-600 px-6 py-4 rounded-t-lg">
-              <div className="flex items-center space-x-3">
-                <div className="flex-shrink-0 w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center text-white">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <AuthGuard>
+      <Layout>
+        <div className="space-y-6">
+          {/* 헤더 */}
+          <div className="bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="bg-white/20 p-3 rounded-lg">
+                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                     />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">권한 설정</h3>
-                  <p className="text-white/80 text-sm mt-1">
-                    {selectedRole?.name} 역할의 권한을 관리합니다
-                  </p>
+                  <h1 className="text-2xl font-bold">역할 관리 (Redux)</h1>
+                  <p className="text-white/80 mt-1">Redux를 사용한 역할 관리 시스템입니다.</p>
                 </div>
               </div>
-            </div>
-
-            {/* 컨텐츠 */}
-            <div className="px-6 py-6">
-              <div className="space-y-6">
-                {/* 역할 정보 섹션 */}
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <svg
-                      className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                    <div>
-                      <h4 className="text-sm font-medium text-green-800">역할 정보</h4>
-                      <div className="text-sm text-green-700 mt-2 space-y-1">
-                        <p>
-                          <strong>이름:</strong> {selectedRole?.name}
-                        </p>
-                        <p>
-                          <strong>설명:</strong> {selectedRole?.description}
-                        </p>
-                        <p>
-                          <strong>서비스:</strong>{' '}
-                          {selectedRole ? getServiceName(selectedRole.serviceId) : ''}
-                        </p>
-                        <p>
-                          <strong>우선순위:</strong> {selectedRole?.priority}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 권한 검색 */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <svg
-                      className="w-5 h-5 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                    <label className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                      권한 검색
-                    </label>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="권한을 검색하세요..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all bg-white"
-                  />
-                </div>
-
-                {/* 권한 목록 */}
-                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                  {/* 전체 선택/해제 버튼 */}
-                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <svg
-                            className="w-4 h-4 text-blue-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-gray-900">전체 권한</h4>
-                          <p className="text-xs text-gray-500">{mockPermissions.length}개 권한</p>
-                        </div>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-blue-600 border-blue-300 hover:bg-blue-50 transition-all hover:scale-105"
-                      >
-                        <svg
-                          className="w-4 h-4 mr-1"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M5 13l4 4L19 7"
-                          />
-                        </svg>
-                        전체 선택
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="max-h-96 overflow-y-auto">
-                    {/* 서비스별로 그룹화된 권한 목록 */}
-                    {mockServices.map((service) => {
-                      const servicePermissions = mockPermissions.filter(
-                        (p) => p.serviceId === service.id
-                      );
-                      if (servicePermissions.length === 0) return null;
-
-                      return (
-                        <div key={service.id} className="border-b border-gray-100 last:border-b-0">
-                          <div className="bg-gradient-to-r from-green-50 to-teal-50 px-4 py-3 flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                                <svg
-                                  className="w-4 h-4 text-green-600"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                                  />
-                                </svg>
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-gray-900">
-                                  {service.displayName || service.name}
-                                </h4>
-                                <p className="text-xs text-gray-500">
-                                  {servicePermissions.length}개 권한
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-green-600 border-green-300 hover:bg-green-50 transition-all hover:scale-105"
-                            >
-                              <svg
-                                className="w-4 h-4 mr-1"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M5 13l4 4L19 7"
-                                />
-                              </svg>
-                              전체 선택
-                            </Button>
-                          </div>
-                          <div className="p-3 space-y-2">
-                            {servicePermissions.map((permission) => {
-                              const isSelected = mockRolePermissions.some(
-                                (rp) =>
-                                  rp.roleId === selectedRole?.id &&
-                                  rp.permissionId === permission.id
-                              );
-                              return (
-                                <label
-                                  key={permission.id}
-                                  className="flex items-center space-x-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-all"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    defaultChecked={isSelected}
-                                    className="rounded border-gray-300 text-green-600 focus:ring-green-500 w-4 h-4"
-                                  />
-                                  <div className="flex-1">
-                                    <div className="flex items-center space-x-2">
-                                      <span className="font-medium text-gray-900">
-                                        {permission.action.split(':')[0]}
-                                      </span>
-                                      <svg
-                                        className="w-4 h-4 text-gray-400"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                      >
-                                        <path
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                          strokeWidth={2}
-                                          d="M13 7l5 5m0 0l-5 5m5-5H6"
-                                        />
-                                      </svg>
-                                      <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                                        {permission.action.split(':')[1]}
-                                      </span>
-                                    </div>
-                                    <div className="text-sm text-gray-500 mt-1">
-                                      {permission.description}
-                                    </div>
-                                  </div>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 선택된 권한 개수 */}
-                <div className="bg-gray-50 rounded-lg p-4 border border-gray-100">
-                  <div className="flex justify-between items-center">
-                    <div className="flex items-center space-x-2">
-                      <svg
-                        className="w-5 h-5 text-green-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      <span className="text-sm font-medium text-gray-700">
-                        {selectedRole ? getRolePermissionCount(selectedRole.id) : 0}개 권한 선택됨
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 액션 버튼 */}
-            <div className="px-6 py-4 bg-gray-50 rounded-b-lg border-t border-gray-100">
-              <div className="flex justify-end space-x-3">
-                <Button
-                  variant="outline"
-                  onClick={handleClosePermissionModal}
-                  className="transition-all hover:scale-105"
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                  취소
-                </Button>
-                <Button
-                  onClick={() => {
-                    console.log('Permission updated for role:', selectedRole?.id);
-                    handleClosePermissionModal();
-                  }}
-                  className="bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white transition-all hover:scale-105"
-                >
-                  <svg
-                    className="w-4 h-4 mr-2"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                    />
-                  </svg>
-                  권한 저장
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                onClick={() => handleOpenModal()}
+                className="!bg-white !text-purple-700 hover:!bg-purple-50"
+              >
+                새 역할 추가
+              </Button>
             </div>
           </div>
-        </Modal>
 
-        {/* 삭제 확인 모달 */}
-        <Modal
-          isOpen={deleteConfirmOpen}
-          onClose={() => setDeleteConfirmOpen(false)}
-          title="역할 삭제"
-        >
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="flex-shrink-0">
+          {/* 에러 메시지 */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex">
                 <svg
-                  className="h-10 w-10 text-red-400"
+                  className="w-5 h-5 text-red-400"
                   fill="none"
-                  viewBox="0 0 24 24"
                   stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.728-.833-2.498 0L4.316 18.5c-.77.833.192 2.5 1.732 2.5z"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">역할을 삭제하시겠습니까?</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  <strong>{roleToDelete?.name}</strong> 역할을 삭제하면 이 역할을 가진 모든 사용자의
-                  권한이 제거됩니다.
-                </p>
-              </div>
-            </div>
-
-            {roleToDelete && getRolePermissionCount(roleToDelete.id) > 0 && (
-              <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-                <div className="flex">
-                  <div className="flex-shrink-0">
-                    <svg
-                      className="h-5 w-5 text-blue-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div className="ml-3">
-                    <h3 className="text-sm font-medium text-blue-800">
-                      현재 {getRolePermissionCount(roleToDelete.id)}개 권한 보유
-                    </h3>
-                    <div className="mt-2 text-sm text-blue-700">
-                      <p>보유 권한: {getRolePermissions(roleToDelete.id).slice(0, 3).join(', ')}</p>
-                      {getRolePermissions(roleToDelete.id).length > 3 && (
-                        <p>외 {getRolePermissions(roleToDelete.id).length - 3}개 더</p>
-                      )}
-                    </div>
-                  </div>
+                <div className="ml-3">
+                  <p className="text-sm text-red-800">{error}</p>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
-                취소
-              </Button>
-              <Button variant="danger" onClick={confirmDeleteRole}>
-                삭제
-              </Button>
+          {/* 검색 */}
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">역할명</label>
+                <input
+                  type="text"
+                  placeholder="역할명을 입력하세요"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => handleSearch({ ...searchQuery, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">서비스</label>
+                <select
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  onChange={(e) => handleSearch({ ...searchQuery, serviceId: e.target.value })}
+                >
+                  <option value="">모든 서비스</option>
+                  {services.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-end">
+                <Button onClick={() => handleSearch({})}>검색 초기화</Button>
+              </div>
             </div>
           </div>
-        </Modal>
-      </div>
-    </Layout>
+
+          {/* 테이블 */}
+          <LoadingOverlay isLoading={isLoading} text="역할 목록을 불러오는 중...">
+            {isLoading && roles.length === 0 ? (
+              <div className="bg-white rounded-lg shadow space-y-4 p-6">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <TableRowSkeleton key={index} />
+                ))}
+              </div>
+            ) : (
+              <Table
+                data={roles}
+                columns={columns}
+                loading={false}
+                sortBy="name"
+                sortOrder={SortOrderType.DESC}
+                onSort={(column) => {
+                  // Sort functionality placeholder
+                }}
+              />
+            )}
+          </LoadingOverlay>
+
+          {/* 페이지네이션 */}
+          <Pagination
+            pageInfo={pagination}
+            onPageChange={handlePageChange}
+            onLimitChange={(limit) => {
+              handleSearch({ ...searchQuery, limit });
+            }}
+          />
+
+          {/* 역할 생성/수정 모달 */}
+          <Modal
+            isOpen={isModalOpen}
+            onClose={handleCloseModal}
+            title={selectedRole ? '역할 수정' : '새 역할 추가'}
+            size="lg"
+          >
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* 일반적인 에러 메시지 */}
+              {formError && (
+                <ApiErrorMessage
+                  error={{ message: formError }}
+                  onDismiss={() => setFormError(null)}
+                />
+              )}
+
+              <FormField
+                label="역할명"
+                required
+                {...(errors.name?.message && { error: errors.name.message })}
+                className="pb-4"
+              >
+                <Input
+                  type="text"
+                  {...register('name', {
+                    required: '역할명을 입력해주세요',
+                    minLength: {
+                      value: 2,
+                      message: '역할명은 최소 2자 이상이어야 합니다',
+                    },
+                    maxLength: {
+                      value: 50,
+                      message: '역할명은 최대 50자까지 입력 가능합니다',
+                    },
+                  })}
+                  required
+                  {...(errors.name?.message && { error: errors.name.message })}
+                  placeholder="역할명을 입력하세요"
+                />
+              </FormField>
+
+              <FormField
+                label="설명"
+                {...(errors.description?.message && { error: errors.description.message })}
+                hint="역할에 대한 상세한 설명을 입력하세요 (선택사항)"
+                className="pb-4"
+              >
+                <Textarea
+                  {...register('description', {
+                    maxLength: {
+                      value: 500,
+                      message: '설명은 최대 500자까지 입력 가능합니다',
+                    },
+                  })}
+                  {...(errors.description?.message && { error: errors.description.message })}
+                  rows={3}
+                  placeholder="역할에 대한 설명을 입력하세요 (선택사항)"
+                />
+              </FormField>
+
+              <FormField
+                label="우선순위"
+                required
+                {...(errors.priority?.message && { error: errors.priority.message })}
+                hint="낮은 숫자일수록 높은 우선순위입니다 (1-100)"
+                className="pb-4"
+              >
+                <Input
+                  type="number"
+                  {...register('priority', {
+                    required: '우선순위를 입력해주세요',
+                    min: {
+                      value: 1,
+                      message: '우선순위는 1 이상이어야 합니다',
+                    },
+                    max: {
+                      value: 100,
+                      message: '우선순위는 100 이하여야 합니다',
+                    },
+                    valueAsNumber: true,
+                  })}
+                  required
+                  {...(errors.priority?.message && { error: errors.priority.message })}
+                  placeholder="1"
+                  min="1"
+                  max="100"
+                />
+              </FormField>
+
+              {!selectedRole && (
+                <FormField
+                  label="서비스"
+                  required
+                  {...(errors.serviceId?.message && { error: errors.serviceId.message })}
+                  hint="이 역할이 속할 서비스를 선택하세요"
+                  className="pb-4"
+                >
+                  <Select
+                    {...register('serviceId', {
+                      required: '서비스를 선택해주세요',
+                    })}
+                    required
+                    {...(errors.serviceId?.message && { error: errors.serviceId.message })}
+                    placeholder="서비스를 선택하세요"
+                    options={serviceOptions}
+                  />
+                </FormField>
+              )}
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button type="button" variant="outline" onClick={handleCloseModal}>
+                  취소
+                </Button>
+                <LoadingButton
+                  type="submit"
+                  isLoading={isActionsLoading('save')}
+                  loadingText="저장 중..."
+                  disabled={isSubmitting}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {selectedRole ? '수정' : '생성'}
+                </LoadingButton>
+              </div>
+            </form>
+          </Modal>
+
+          {/* 삭제 확인 모달 */}
+          <Modal
+            isOpen={isDeleteModalOpen}
+            onClose={handleCloseDeleteModal}
+            title="역할 삭제"
+            size="sm"
+          >
+            <div className="space-y-4">
+              <p className="text-gray-700">
+                정말로 <strong>{selectedRole?.name}</strong> 역할을 삭제하시겠습니까?
+              </p>
+              <p className="text-sm text-red-600">이 작업은 되돌릴 수 없습니다.</p>
+              <div className="flex justify-end space-x-3">
+                <Button variant="outline" onClick={handleCloseDeleteModal}>
+                  취소
+                </Button>
+                <LoadingButton
+                  onClick={handleDeleteRole}
+                  isLoading={isActionsLoading('delete')}
+                  loadingText="삭제 중..."
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  삭제
+                </LoadingButton>
+              </div>
+            </div>
+          </Modal>
+
+          {/* 권한 관리 모달 */}
+          <RolePermissionModal
+            isOpen={isPermissionModalOpen}
+            onClose={handleClosePermissionModal}
+            role={selectedRole}
+          />
+        </div>
+      </Layout>
+    </AuthGuard>
   );
 }
+

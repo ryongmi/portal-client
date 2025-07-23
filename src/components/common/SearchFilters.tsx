@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { SearchFilters as SearchFiltersType } from '@/types/api'
 import Button from './Button'
 
@@ -16,7 +16,7 @@ interface SearchFiltersProps {
   onReset: () => void
 }
 
-export default function SearchFilters({ fields, onFiltersChange, onReset }: SearchFiltersProps): JSX.Element {
+const SearchFilters = memo<SearchFiltersProps>(function SearchFilters({ fields, onFiltersChange, onReset }) {
   const [filters, setFilters] = useState<SearchFiltersType>({})
   const [debouncedFilters, setDebouncedFilters] = useState<SearchFiltersType>({})
   const onFiltersChangeRef = useRef(onFiltersChange)
@@ -124,4 +124,8 @@ export default function SearchFilters({ fields, onFiltersChange, onReset }: Sear
       </div>
     </div>
   )
-}
+});
+
+SearchFilters.displayName = 'SearchFilters';
+
+export default SearchFilters;

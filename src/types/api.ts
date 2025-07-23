@@ -1,50 +1,40 @@
-export enum LimitType {
-  TEN = 10,
-  TWENTY = 20,
-  THIRTY = 30,
-  FIFTY = 50,
-  ONE_HUNDRED = 100
-}
+// 공유 패키지에서 임포트
+import type { ResponseFormat } from '@krgeobuk/core/interfaces';
+import type { PaginatedResult, PaginateBaseOptions } from '@krgeobuk/core/interfaces';
+import type { LimitType, SortOrderType } from '@krgeobuk/core/enum';
 
-export enum SortOrderType {
-  ASC = 'ASC',
-  DESC = 'DESC'
-}
+// 공유 패키지 타입 재사용 (값으로도 사용 가능하게 import)
+export { LimitType, SortOrderType } from '@krgeobuk/core/enum';
+export type { ResponseFormat } from '@krgeobuk/core/interfaces';
+export type { PaginatedResult, PaginatedResultBase } from '@krgeobuk/core/interfaces';
 
+// 공통 패키지에서 통합 사용자 프로필 관련 타입 임포트
+export type { UserProfile } from '@krgeobuk/user/interfaces';
+export type { Service as ServiceInfo } from '@krgeobuk/shared/service/interfaces';
+export type { OAuthAccountProviderType } from '@krgeobuk/shared/oauth';
+
+// API 응답 타입 별칭
+export type ApiResponse<T> = ResponseFormat<T>;
+export type PaginatedResponse<T> = PaginatedResult<T>;
+
+// 기존 타입들
 export enum SortByBaseType {
   CREATED_AT = 'createdAt',
-  UPDATED_AT = 'updatedAt'
+  UPDATED_AT = 'updatedAt',
 }
 
-export interface PaginationQuery {
-  page?: number
-  limit?: LimitType
-  sortOrder?: SortOrderType
-  sortBy?: string
-}
-
-export interface PaginatedResultBase {
-  page: number
-  limit: LimitType
-  totalItems: number
-  totalPages: number
-  hasPreviousPage: boolean
-  hasNextPage: boolean
-}
-
-export interface ResponseFormat<T> {
-  code: string
-  statusCode: number
-  message: string
-  isLogin: boolean
-  data: T
-}
-
-export interface PaginatedResponse<T> {
-  data: T[]
-  pageInfo: PaginatedResultBase
-}
+export type PaginationQuery = PaginateBaseOptions;
 
 export interface SearchFilters {
-  [key: string]: string | number | boolean | undefined
+  [key: string]: string | number | boolean | undefined;
 }
+
+// 구글 인증 체크 도우미 함수
+export const hasGoogleAuth = (user: UserProfile): boolean =>
+  user.oauthAccount.provider === 'google';
+
+export const hasNaverAuth = (user: UserProfile): boolean => user.oauthAccount.provider === 'naver';
+
+export const isHomepageUser = (user: UserProfile): boolean =>
+  user.oauthAccount.provider === 'homePage';
+
