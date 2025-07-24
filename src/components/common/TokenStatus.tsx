@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAppSelector } from '@/store/hooks';
-import { tokenManager } from '@/utils/tokenManager';
+import { tokenManager } from '@/lib/httpClient';
 
 export const TokenStatus: React.FC = () => {
   const { accessToken, isAuthenticated } = useAppSelector((state) => state.auth);

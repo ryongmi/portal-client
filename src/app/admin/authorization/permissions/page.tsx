@@ -35,7 +35,7 @@ import type {
   CreatePermissionRequest,
   UpdatePermissionRequest,
 } from '@/types';
-import { SortOrderType } from '@/types/api';
+import { SortOrderType } from '@krgeobuk/core/enum';
 
 // 폼 데이터 타입 정의
 type PermissionFormData = {

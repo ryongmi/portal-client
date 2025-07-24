@@ -36,7 +36,7 @@ import type {
   CreateRoleRequest,
   UpdateRoleRequest,
 } from '@/types';
-import { SortOrderType } from '@/types/api';
+import { SortOrderType } from '@krgeobuk/core/enum';
 
 export default function ReduxRolesPage(): JSX.Element {
   const dispatch = useAppDispatch();

@@ -31,7 +31,7 @@ import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { validationRules, mapServerErrorsToFormErrors } from '@/utils/formValidation';
 import { toast } from '@/components/common/ToastContainer';
 import type { UserDetail, UserSearchResult, UserSearchQuery } from '@/types';
-import { SortOrderType } from '@/types/api';
+import { SortOrderType } from '@krgeobuk/core/enum';
 
 export default function ReduxUsersPage(): JSX.Element {
   const dispatch = useAppDispatch();

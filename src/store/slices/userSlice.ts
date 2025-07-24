@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { authApi } from '@/lib/axios';
+import { authApi } from '@/lib/httpClient';
 import type { User, UserSearchResult, UserDetail, UserSearchQuery, UpdateMyProfileRequest, ChangePasswordRequest } from '@/types';
-import type { ApiResponse, PaginatedResponse } from '@/types/api';
+import type { ApiResponse, PaginatedResponse } from '@/lib/httpClient';
 import type { PaginatedResultBase } from '@krgeobuk/core/interfaces';
 
 interface UserState {
@@ -174,7 +174,7 @@ const userSlice = createSlice({
       })
       .addCase(fetchUsers.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.users = action.payload.items;
+        state.users = action.payload.items as unknown as UserSearchResult[];
         state.pagination = action.payload.pageInfo;
         state.error = null;
       })
@@ -246,7 +246,7 @@ const userSlice = createSlice({
       })
       .addCase(createUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.users.push(action.payload);
+        state.users.push(action.payload as unknown as UserSearchResult);
         state.error = null;
       })
       .addCase(createUser.rejected, (state, action) => {
@@ -262,10 +262,10 @@ const userSlice = createSlice({
         state.isLoading = false;
         const index = state.users.findIndex(user => user.id === action.payload.id);
         if (index !== -1) {
-          state.users[index] = action.payload;
+          state.users[index] = action.payload as unknown as UserSearchResult;
         }
         if (state.selectedUser?.id === action.payload.id) {
-          state.selectedUser = action.payload;
+          state.selectedUser = action.payload as unknown as UserDetail;
         }
         state.error = null;
       })

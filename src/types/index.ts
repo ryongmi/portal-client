@@ -104,6 +104,11 @@ export interface ServiceVisibleRole extends Record<string, unknown> {
 // OAuth Provider 타입 (OAuthBadge 컴포넌트용)
 export type OAuthProvider = 'google' | 'naver' | 'kakao' | 'github';
 
+// 검색 필터 타입
+export interface SearchFilters {
+  [key: string]: string | number | boolean | undefined;
+}
+
 // 권한 체크 응답 타입 (공통패키지에 없다면 로컬 정의)
 export interface PermissionCheckResponse {
   hasPermission: boolean;

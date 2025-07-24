@@ -5,7 +5,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 
-import type { OAuthAccountProviderType } from '@/types/api';
+import type { OAuthAccountProviderType } from '@krgeobuk/shared/oauth';
 
 interface OAuthBadgeProps {
   provider: OAuthAccountProviderType;

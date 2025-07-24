@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store/hooks';
 import { refreshToken } from '@/store/slices/authSlice';
-import { tokenManager } from '@/utils/tokenManager';
+import { tokenManager } from '@/lib/httpClient';
 
 export const TokenExpirationWarning: React.FC = () => {
   const { accessToken, isAuthenticated } = useAppSelector((state) => state.auth);

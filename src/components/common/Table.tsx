@@ -1,14 +1,14 @@
 import { ReactNode, memo, useMemo } from 'react';
-import { SortOrderType } from '@/types/api';
+import { SortOrderType } from '@krgeobuk/core/enum';
 
-interface Column<T extends Record<string, unknown>> {
+interface Column<T> {
   key: keyof T & string;
   label: string;
   sortable?: boolean;
   render?: (value: T[keyof T], row: T) => ReactNode;
 }
 
-interface TableProps<T extends Record<string, unknown>> {
+interface TableProps<T> {
   data: T[];
   columns: Column<T>[];
   loading?: boolean;
@@ -212,9 +212,9 @@ const Table = <T = Record<string, unknown>>({
           <tbody className="bg-white divide-y divide-gray-100">
             {data.map((row, index) => {
               // 안정적인 key 사용 (가능한 경우 ID 사용)
-              const rowKey = (row as any).id || index;
+              const rowKey = (row as T & { id?: string | number })?.id || index;
               return (
-                <TableRow
+                <TableRow<T>
                   key={rowKey}
                   row={row}
                   columns={columns}
@@ -230,11 +230,13 @@ const Table = <T = Record<string, unknown>>({
 };
 
 // 개별 테이블 행 컴포넌트 메모이제이션
-const TableRow = memo<{
-  row: Record<string, unknown>;
-  columns: Column<Record<string, unknown>>[];
+interface TableRowProps<T> {
+  row: T;
+  columns: Column<T>[];
   index: number;
-}>(({ row, columns, index }) => (
+}
+
+const TableRow = <T,>({ row, columns, index }: TableRowProps<T>) => (
   <tr
     className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 focus-within:bg-blue-50"
     role="row"
@@ -257,7 +259,7 @@ const TableRow = memo<{
       );
     })}
   </tr>
-));
+);
 
 TableRow.displayName = 'TableRow';
 

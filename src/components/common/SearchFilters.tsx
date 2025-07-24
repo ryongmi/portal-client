@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, memo } from 'react'
-import { SearchFilters as SearchFiltersType } from '@/types/api'
+import type { SearchFilters as SearchFiltersType } from '@/types';
 import Button from './Button'
 
 interface FilterField {
@@ -48,7 +48,7 @@ const SearchFilters = memo<SearchFiltersProps>(function SearchFilters({ fields, 
   }, [debouncedFilters])
 
   const handleFilterChange = useCallback((key: string, value: string | boolean | undefined): void => {
-    setFilters(prev => ({
+    setFilters((prev: SearchFiltersType) => ({
       ...prev,
       [key]: value
     }))

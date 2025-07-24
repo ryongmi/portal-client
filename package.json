@@ -14,6 +14,7 @@
     "@krgeobuk/auth": "^1.0.0",
     "@krgeobuk/authorization": "^1.0.0",
     "@krgeobuk/core": "^1.0.0",
+    "@krgeobuk/http-client": "^1.0.0",
     "@krgeobuk/jwt": "^1.0.0",
     "@krgeobuk/permission": "^1.0.0",
     "@krgeobuk/role": "^1.0.0",

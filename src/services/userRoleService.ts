@@ -1,5 +1,4 @@
-import { authzApi } from '@/lib/axios';
-import type { ApiResponse } from '@/types/api';
+import { authzApi, type ApiResponse } from '@/lib/httpClient';
 
 export class UserRoleService {
   /**

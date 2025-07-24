@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { authzApi } from '@/lib/axios';
+import { authzApi } from '@/lib/httpClient';
 import type {
   Permission,
   PermissionSearchResult,
@@ -11,7 +11,7 @@ import type {
   PermissionCheckResponse,
   PermissionDetail,
 } from '@/types';
-import type { ApiResponse, PaginatedResponse } from '@/types/api';
+import type { ApiResponse, PaginatedResponse } from '@/lib/httpClient';
 import type { PaginatedResultBase } from '@krgeobuk/core/interfaces';
 
 interface PermissionState {
@@ -255,7 +255,7 @@ const permissionSlice = createSlice({
       })
       .addCase(fetchPermissions.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.permissions = action.payload.items;
+        state.permissions = action.payload.items as unknown as PermissionSearchResult[];
         state.pagination = action.payload.pageInfo;
         state.error = null;
       })
@@ -306,7 +306,7 @@ const permissionSlice = createSlice({
             ...state.permissions[permissionIndex],
             ...permissionData,
             id: permissionId, // id 속성 명시적으로 설정
-          };
+          } as PermissionSearchResult;
         }
         if (state.selectedPermission && state.selectedPermission.id === permissionId) {
           state.selectedPermission = { ...state.selectedPermission, ...permissionData };

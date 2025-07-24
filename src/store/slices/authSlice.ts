@@ -1,6 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { authApi } from '@/lib/axios';
-import { tokenManager } from '@/utils/tokenManager';
+import { authApi, tokenManager } from '@/lib/httpClient';
 import type { 
   User, 
   LoginRequest, 
@@ -8,8 +7,8 @@ import type {
   SignupRequest, 
   RefreshResponse
 } from '@/types';
-import type { LoggedInUser } from '@krgeobuk/auth/interfaces';
-import type { ApiResponse } from '@/types/api';
+import type { LoggedInUser } from '@krgeobuk/shared/user';
+import type { ApiResponse } from '@/lib/httpClient';
 
 interface AuthState {
   user: User | null;
@@ -33,11 +32,20 @@ const initialState: AuthState = {
 const convertLoggedInUserToUser = (loggedInUser: LoggedInUser): User => ({
   id: 'temp-' + Date.now(), // 임시 ID 생성
   name: loggedInUser.name,
-  email: loggedInUser.email,
-  avatar: loggedInUser.profileImageUrl || '',
-  role: 'user' as const,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
+  email: loggedInUser.email, // LoggedInUser의 email은 required
+  profileImageUrl: loggedInUser.profileImageUrl || null,
+  isIntegrated: true,
+  isEmailVerified: true,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+
+// User를 LoggedInUser 타입으로 변환하는 헬퍼 함수
+const convertUserToLoggedInUser = (user: User): LoggedInUser => ({
+  email: user.email || '', // User의 email이 undefined일 경우 빈 문자열로 처리
+  name: user.name || '',
+  nickname: user.nickname || null,
+  profileImageUrl: user.profileImageUrl || null,
 });
 
 // 로그인 비동기 액션
@@ -290,7 +298,7 @@ const authSlice = createSlice({
         // 토큰과 사용자 정보가 모두 있는 경우에만 인증된 상태로 설정
         if (action.payload.accessToken && action.payload.user) {
           state.accessToken = action.payload.accessToken;
-          state.user = convertLoggedInUserToUser(action.payload.user);
+          state.user = action.payload.user;
           state.isAuthenticated = true;
         } else {
           // 토큰이나 사용자 정보가 없으면 비인증 상태로 설정
@@ -317,7 +325,7 @@ const authSlice = createSlice({
       .addCase(setOAuthToken.fulfilled, (state, action) => {
         state.isLoading = false;
         state.accessToken = action.payload.accessToken;
-        state.user = convertLoggedInUserToUser(action.payload.user);
+        state.user = action.payload.user;
         state.isAuthenticated = true;
         state.isInitialized = true;
       })

@@ -1,7 +1,7 @@
 import { UserService } from './userService';
 import { RoleService } from './roleService';
 import { PermissionService } from './permissionService';
-import type { ApiResponse } from '@/lib/axios';
+import type { ApiResponse } from '@/lib/httpClient';
 
 // 대시보드 통계 타입 정의
 export interface DashboardStatistics {

@@ -1,5 +1,4 @@
-import { authApi, tokenManager } from "@/lib/axios";
-import type { ApiResponse } from "@/lib/axios";
+import { authApi, tokenManager, type ApiResponse } from "@/lib/httpClient";
 
 // 로컬 타입 사용
 import type { 

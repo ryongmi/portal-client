@@ -1,4 +1,5 @@
-import { LimitType, PaginatedResultBase } from '@/types/api'
+import { LimitType } from '@krgeobuk/core/enum';
+import type { PaginatedResultBase } from '@krgeobuk/core/interfaces';
 import Button from './Button'
 
 interface PaginationProps {

@@ -1,5 +1,9 @@
 import { useState, useCallback, useMemo } from 'react'
-import { LimitType, SortOrderType, PaginationQuery, SearchFilters } from '@/types/api'
+import { LimitType, SortOrderType } from '@krgeobuk/core/enum';
+import type { PaginateBaseOptions } from '@krgeobuk/core/interfaces';
+import type { SearchFilters } from '@/types';
+
+type PaginationQuery = PaginateBaseOptions;
 
 interface UsePaginationProps {
   initialPage?: number
@@ -36,7 +40,7 @@ export function usePagination({
     
     // 검색 필터 업데이트
     if (Object.keys(newFilters).length > 0) {
-      setSearchFilters(prev => ({ ...prev, ...newFilters }))
+      setSearchFilters((prev: SearchFilters) => ({ ...prev, ...newFilters }))
     }
   }, [])
 
@@ -61,7 +65,7 @@ export function usePagination({
   }, [sortBy, sortOrder])
 
   const updateSearch = useCallback((filters: SearchFilters): void => {
-    setSearchFilters(prev => ({ ...prev, ...filters }))
+    setSearchFilters((prev: SearchFilters) => ({ ...prev, ...filters }))
     setPage(1)
   }, [])
 

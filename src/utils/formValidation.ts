@@ -144,7 +144,7 @@ export function mapServerErrorsToFormErrors(serverErrors: ServerError): Record<s
 /**
  * 폼 에러를 사용자 친화적 메시지로 변환
  */
-export function getFormErrorMessage(errors: Record<string, any>): string {
+export function getFormErrorMessage(errors: Record<string, { message?: string }>): string {
   const errorMessages: string[] = [];
 
   Object.keys(errors).forEach((field) => {
@@ -168,7 +168,7 @@ export function getFormErrorMessage(errors: Record<string, any>): string {
 /**
  * 특정 필드의 에러 메시지만 추출
  */
-export function getFieldErrorMessage(errors: Record<string, any>, fieldName: string): string | undefined {
+export function getFieldErrorMessage(errors: Record<string, { message?: string }>, fieldName: string): string | undefined {
   const error = errors[fieldName];
   return error?.message;
 }

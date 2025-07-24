@@ -1,6 +1,5 @@
-import { authApi } from "@/lib/axios";
-import type { ApiResponse } from "@/lib/axios";
-import type { UserProfile } from "@/types/api";
+import { authApi, type ApiResponse } from "@/lib/httpClient";
+import type { UserProfile } from "@krgeobuk/user/interfaces";
 
 // 공유 라이브러리 인터페이스 활용
 import type { 

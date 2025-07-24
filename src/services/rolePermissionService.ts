@@ -1,5 +1,4 @@
-import { authzApi } from "@/lib/axios";
-import type { ApiResponse } from "@/lib/axios";
+import { authzApi, type ApiResponse } from "@/lib/httpClient";
 
 // 공유 라이브러리 인터페이스 활용
 import type { PermissionDetail } from "@krgeobuk/permission";

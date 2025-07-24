@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { portalApi } from '@/lib/axios';
+import { portalApi } from '@/lib/httpClient';
 import type {
   Service,
   ServiceSearchResult,
@@ -9,7 +9,7 @@ import type {
   UpdateServiceRequest,
   RoleIdsRequest,
 } from '@/types';
-import type { ApiResponse, PaginatedResponse } from '@/types/api';
+import type { ApiResponse, PaginatedResponse } from '@/lib/httpClient';
 import type { PaginatedResultBase } from '@krgeobuk/core/interfaces';
 
 interface ServiceState {
@@ -218,7 +218,7 @@ const serviceSlice = createSlice({
       })
       .addCase(fetchServices.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.services = action.payload.items;
+        state.services = action.payload.items as unknown as ServiceSearchResult[];
         state.pagination = action.payload.pageInfo;
         state.error = null;
       })

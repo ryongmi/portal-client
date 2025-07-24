@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { initializeAuth } from '@/store/slices/authSlice';
 import { useTokenRefresh } from '@/hooks/useTokenRefresh';
-import { tokenManager } from '@/utils/tokenManager';
+import { tokenManager } from '@/lib/httpClient';
 import { SecuritySession, SecurityLogger, loginRateLimiter } from '@/utils/security';
 import TokenExpirationWarning from './TokenExpirationWarning';
 import SessionManager from './SessionManager';

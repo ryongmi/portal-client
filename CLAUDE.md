@@ -460,7 +460,7 @@ export interface RoleFormData {
 ### 1. API 서비스 구조
 ```typescript
 // src/services/userService.ts
-import { apiClient } from '@/lib/axios';
+import { httpClient } from '@/lib/httpClient';
 import type { User, CreateUserDto, UpdateUserDto, SearchParams } from '@/types';
 
 export const userService = {

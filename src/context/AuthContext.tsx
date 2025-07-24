@@ -4,7 +4,7 @@ import React, { createContext, useContext, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { store } from "@/store";
 import { loginUser, signupUser, logoutUser, fetchUserProfile, initializeAuth, setOAuthToken, clearUser } from "@/store/slices/authSlice";
-import { tokenManager } from "@/lib/axios";
+import { tokenManager } from "@/lib/httpClient";
 import type { User, LoginRequest, SignupRequest } from "@/types";
 
 interface AuthContextType {

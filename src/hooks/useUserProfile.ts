@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { UserService } from '@/services/userService';
-import type { UserProfile } from '@/types/api';
+import type { UserProfile } from '@krgeobuk/user/interfaces';
 
 interface UseUserProfileReturn {
   userProfile: UserProfile | null;

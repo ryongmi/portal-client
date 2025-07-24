@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { authzApi } from '@/lib/axios';
+import { authzApi } from '@/lib/httpClient';
 import type {
   RoleSearchResult,
   RoleDetail,
@@ -8,7 +8,7 @@ import type {
   UpdateRoleRequest,
   RoleIdsRequest,
 } from '@/types';
-import type { ApiResponse, PaginatedResponse } from '@/types/api';
+import type { ApiResponse, PaginatedResponse } from '@/lib/httpClient';
 import type { PaginatedResultBase } from '@krgeobuk/core/interfaces';
 
 interface RoleState {
@@ -247,7 +247,7 @@ const roleSlice = createSlice({
             ...state.roles[roleIndex], 
             ...roleData,
             id: roleId, // id 속성 명시적으로 설정
-          };
+          } as RoleSearchResult;
         }
         if (state.selectedRole && state.selectedRole.id === roleId) {
           state.selectedRole = { ...state.selectedRole, ...roleData };

@@ -34,7 +34,7 @@ import type {
   CreateServiceRequest,
   UpdateServiceRequest,
 } from '@/types';
-import { SortOrderType } from '@/types/api';
+import { SortOrderType } from '@krgeobuk/core/enum';
 
 export default function ReduxServicesPage(): JSX.Element {
   const dispatch = useAppDispatch();
