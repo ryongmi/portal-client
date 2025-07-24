@@ -4,7 +4,7 @@ import { Provider } from 'react-redux';
 import { useEffect } from 'react';
 import { store } from '@/store';
 import { AuthProvider } from '@/context/AuthContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ToastContainer, { toast } from '@/components/common/ToastContainer';
 

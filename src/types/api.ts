@@ -9,8 +9,9 @@ export type { ResponseFormat } from '@krgeobuk/core/interfaces';
 export type { PaginatedResult, PaginatedResultBase } from '@krgeobuk/core/interfaces';
 
 // 공통 패키지에서 통합 사용자 프로필 관련 타입 임포트
+import type { UserProfile } from '@krgeobuk/user/interfaces';
 export type { UserProfile } from '@krgeobuk/user/interfaces';
-export type { Service as ServiceInfo } from '@krgeobuk/shared/service/interfaces';
+export type { Service as ServiceInfo } from '@krgeobuk/shared/service';
 export type { OAuthAccountProviderType } from '@krgeobuk/shared/oauth';
 
 // API 응답 타입 별칭
@@ -37,4 +38,3 @@ export const hasNaverAuth = (user: UserProfile): boolean => user.oauthAccount.pr
 
 export const isHomepageUser = (user: UserProfile): boolean =>
   user.oauthAccount.provider === 'homePage';
-

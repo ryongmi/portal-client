@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { portalApi } from '@/lib/axios';
 import type {
+  Service,
   ServiceSearchResult,
   ServiceDetail,
   ServiceSearchQuery,

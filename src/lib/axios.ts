@@ -10,15 +10,10 @@ import type {
 } from '@krgeobuk/auth';
 import type { UserDetail } from '@krgeobuk/user';
 import type { JwtPayload } from '@krgeobuk/jwt';
+import type { ResponseFormat } from '@krgeobuk/core/interfaces';
 
-// API 응답 타입 정의 (camelCase 통일)
-interface ApiResponse<T = unknown> {
-  code: string;
-  statusCode: number;
-  message: string;
-  isLogin: boolean;
-  data: T;
-}
+// 공유 패키지의 ResponseFormat 사용 (중복 정의 제거)
+type ApiResponse<T = unknown> = ResponseFormat<T>;
 
 // 에러 응답 타입 정의
 interface ApiErrorData {

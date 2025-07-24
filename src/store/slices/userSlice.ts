@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { authApi } from '@/lib/axios';
-import type { UserSearchResult, UserDetail, UserSearchQuery, UpdateMyProfileRequest, ChangePasswordRequest } from '@/types';
+import type { User, UserSearchResult, UserDetail, UserSearchQuery, UpdateMyProfileRequest, ChangePasswordRequest } from '@/types';
 import type { ApiResponse, PaginatedResponse } from '@/types/api';
 import type { PaginatedResultBase } from '@krgeobuk/core/interfaces';
 

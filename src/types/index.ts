@@ -101,24 +101,8 @@ export interface ServiceVisibleRole extends Record<string, unknown> {
   role: Role;
 }
 
-export interface OAuthClient extends Record<string, unknown> {
-  id: string;
-  clientId: string;
-  clientName: string;
-  redirectUri: string;
-  scopes: string[];
-  status: 'active' | 'inactive';
-  createdAt: string;
-}
-
-export interface OAuthAccount extends Record<string, unknown> {
-  id: string;
-  providerId: string;
-  provider: 'google' | 'naver' | 'kakao' | 'github';
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// OAuth Provider 타입 (OAuthBadge 컴포넌트용)
+export type OAuthProvider = 'google' | 'naver' | 'kakao' | 'github';
 
 // 권한 체크 응답 타입 (공통패키지에 없다면 로컬 정의)
 export interface PermissionCheckResponse {

@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { authzApi } from '@/lib/axios';
 import type {
+  Permission,
   PermissionSearchResult,
   PermissionSearchQuery,
   CreatePermissionRequest,
@@ -304,6 +305,7 @@ const permissionSlice = createSlice({
           state.permissions[permissionIndex] = {
             ...state.permissions[permissionIndex],
             ...permissionData,
+            id: permissionId, // id 속성 명시적으로 설정
           };
         }
         if (state.selectedPermission && state.selectedPermission.id === permissionId) {

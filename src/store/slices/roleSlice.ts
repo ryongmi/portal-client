@@ -243,7 +243,11 @@ const roleSlice = createSlice({
         const { roleId, roleData } = action.payload;
         const roleIndex = state.roles.findIndex((role) => role.id === roleId);
         if (roleIndex !== -1) {
-          state.roles[roleIndex] = { ...state.roles[roleIndex], ...roleData };
+          state.roles[roleIndex] = { 
+            ...state.roles[roleIndex], 
+            ...roleData,
+            id: roleId, // id 속성 명시적으로 설정
+          };
         }
         if (state.selectedRole && state.selectedRole.id === roleId) {
           state.selectedRole = { ...state.selectedRole, ...roleData };

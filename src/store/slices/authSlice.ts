@@ -8,6 +8,7 @@ import type {
   SignupRequest, 
   RefreshResponse
 } from '@/types';
+import type { LoggedInUser } from '@krgeobuk/auth/interfaces';
 import type { ApiResponse } from '@/types/api';
 
 interface AuthState {
@@ -27,6 +28,17 @@ const initialState: AuthState = {
   error: null,
   isInitialized: false,
 };
+
+// LoggedInUser를 User 타입으로 변환하는 헬퍼 함수
+const convertLoggedInUserToUser = (loggedInUser: LoggedInUser): User => ({
+  id: 'temp-' + Date.now(), // 임시 ID 생성
+  name: loggedInUser.name,
+  email: loggedInUser.email,
+  avatar: loggedInUser.profileImageUrl || '',
+  role: 'user' as const,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+});
 
 // 로그인 비동기 액션
 export const loginUser = createAsyncThunk(
@@ -201,7 +213,7 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
+        state.user = convertLoggedInUserToUser(action.payload.user);
         state.accessToken = action.payload.accessToken;
         state.isAuthenticated = true;
         state.error = null;
@@ -217,7 +229,7 @@ const authSlice = createSlice({
       })
       .addCase(signupUser.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
+        state.user = convertLoggedInUserToUser(action.payload.user);
         state.accessToken = action.payload.accessToken;
         state.isAuthenticated = true;
         state.error = null;
@@ -278,7 +290,7 @@ const authSlice = createSlice({
         // 토큰과 사용자 정보가 모두 있는 경우에만 인증된 상태로 설정
         if (action.payload.accessToken && action.payload.user) {
           state.accessToken = action.payload.accessToken;
-          state.user = action.payload.user;
+          state.user = convertLoggedInUserToUser(action.payload.user);
           state.isAuthenticated = true;
         } else {
           // 토큰이나 사용자 정보가 없으면 비인증 상태로 설정
@@ -305,7 +317,7 @@ const authSlice = createSlice({
       .addCase(setOAuthToken.fulfilled, (state, action) => {
         state.isLoading = false;
         state.accessToken = action.payload.accessToken;
-        state.user = action.payload.user;
+        state.user = convertLoggedInUserToUser(action.payload.user);
         state.isAuthenticated = true;
         state.isInitialized = true;
       })

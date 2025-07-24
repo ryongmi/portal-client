@@ -100,7 +100,7 @@ export function useRoles() {
     }
   }, []);
 
-  const getRolePermissions = useCallback(async (roleId: string): Promise<PermissionDetail[]> => {
+  const getRolePermissions = useCallback(async (roleId: string): Promise<string[]> => {
     setLoading(true);
     setError(null);
     try {

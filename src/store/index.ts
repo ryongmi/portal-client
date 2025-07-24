@@ -4,7 +4,6 @@ import userSlice from './slices/userSlice';
 import roleSlice from './slices/roleSlice';
 import permissionSlice from './slices/permissionSlice';
 import serviceSlice from './slices/serviceSlice';
-import oauthSlice from './slices/oauthSlice';
 
 export const store = configureStore({
   reducer: {
@@ -13,7 +12,6 @@ export const store = configureStore({
     role: roleSlice,
     permission: permissionSlice,
     service: serviceSlice,
-    oauth: oauthSlice,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

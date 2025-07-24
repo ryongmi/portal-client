@@ -1,14 +1,14 @@
 import { ReactNode, memo, useMemo } from 'react';
 import { SortOrderType } from '@/types/api';
 
-interface Column<T> {
-  key: keyof T;
+interface Column<T extends Record<string, unknown>> {
+  key: keyof T & string;
   label: string;
   sortable?: boolean;
   render?: (value: T[keyof T], row: T) => ReactNode;
 }
 
-interface TableProps<T> {
+interface TableProps<T extends Record<string, unknown>> {
   data: T[];
   columns: Column<T>[];
   loading?: boolean;

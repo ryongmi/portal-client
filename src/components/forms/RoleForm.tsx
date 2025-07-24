@@ -60,9 +60,9 @@ export default function RoleForm({
   useEffect(() => {
     if (role) {
       reset({
-        name: role.name,
-        description: role?.description,
-        serviceId: role.service?.id || '',
+        name: role.name || '',
+        description: role?.description || null,
+        serviceId: role.serviceId || '',
         priority: role.priority || 5,
       });
       // 역할의 기존 권한 로드 (실제 API로 교체 필요)
@@ -95,7 +95,7 @@ export default function RoleForm({
         ...data,
         ...(data.description && data.description.trim()
           ? { description: data.description.trim() }
-          : { description: undefined }),
+          : { description: null }),
       };
     }
 
@@ -113,7 +113,7 @@ export default function RoleForm({
   });
 
   const groupedPermissions = filteredPermissions.reduce((acc, permission) => {
-    const service = services.find((s) => s.id === permission.serviceId);
+    const service = services.find((s) => s.id === permission.service?.id);
     const serviceName = service?.name || '알 수 없음';
     const [resource] = permission.action?.split(':') || [''];
     const key = `${serviceName} - ${resource}`;
@@ -613,7 +613,7 @@ export default function RoleForm({
                               <div className="flex-1">
                                 <div className="flex items-center space-x-2">
                                   <span className="font-medium text-gray-900">
-                                    {permission.action.split(':')[0]}
+                                    {permission.action?.split(':')[0] || ''}
                                   </span>
                                   <svg
                                     className="w-4 h-4 text-gray-400"
@@ -629,7 +629,7 @@ export default function RoleForm({
                                     />
                                   </svg>
                                   <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                                    {permission.action.split(':')[1]}
+                                    {permission.action?.split(':')[1] || ''}
                                   </span>
                                   <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
                                     {serviceName}

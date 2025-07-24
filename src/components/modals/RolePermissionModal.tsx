@@ -19,6 +19,17 @@ import { useErrorHandler } from '@/hooks/useErrorHandler';
 import type { RoleDetail, PermissionSearchResult, PermissionDetail } from '@/types';
 import { RolePermissionService } from '@/services/rolePermissionService';
 
+// PermissionSearchResult를 PermissionDetail로 안전하게 변환하는 함수
+const convertToPermissionDetail = (permission: PermissionSearchResult): PermissionDetail => ({
+  id: permission.id,
+  action: permission.action,
+  description: permission.description,
+  service: permission.service,
+  roles: [], // PermissionSearchResult에는 roles 정보가 없으므로 빈 배열로 초기화
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+
 interface RolePermissionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -59,14 +70,28 @@ const RolePermissionModal = memo<RolePermissionModalProps>(function RolePermissi
     }
   }, [isOpen, role, permissions]);
 
+  // PermissionSearchResult를 PermissionDetail로 변환하는 헬퍼 함수
+  const convertToPermissionDetail = useCallback((searchResult: PermissionSearchResult): PermissionDetail => {
+    return {
+      id: searchResult.id,
+      action: searchResult.action,
+      description: searchResult.description,
+      service: searchResult.service,
+      roles: [], // PermissionSearchResult에는 roles 정보가 없으므로 빈 배열로 초기화
+    };
+  }, []);
+
   // 역할의 현재 권한 로드
   const loadRolePermissions = async (roleId: string) => {
     try {
       const response = await RolePermissionService.getRolePermissions(roleId);
       const permissionIds = response.data || [];
       
-      // 권한 ID 목록을 기반으로 실제 권한 정보 매핑
-      const rolePermissions = permissions.filter(p => permissionIds.includes(p.id!));
+      // 권한 ID 목록을 기반으로 실제 권한 정보 매핑 및 타입 변환
+      const rolePermissions = permissions
+        .filter(p => permissionIds.includes(p.id!))
+        .map(convertToPermissionDetail);
+      
       setCurrentRolePermissions(rolePermissions);
       setSelectedPermissions(new Set(permissionIds));
     } catch (error) {
@@ -96,8 +121,8 @@ const RolePermissionModal = memo<RolePermissionModalProps>(function RolePermissi
   // 사용 가능한 서비스 목록
   const availableServices = useMemo(() => {
     const services = permissions.reduce((acc, permission) => {
-      if (permission.service && !acc.find(s => s.id === permission.service!.id)) {
-        acc.push(permission.service);
+      if (permission.service && permission.service.name && !acc.find(s => s.id === permission.service!.id)) {
+        acc.push({ id: permission.service.id, name: permission.service.name });
       }
       return acc;
     }, [] as Array<{ id: string; name: string }>);
@@ -120,14 +145,15 @@ const RolePermissionModal = memo<RolePermissionModalProps>(function RolePermissi
   // 서비스별 전체 선택/해제 (useCallback으로 최적화)
   const handleServiceToggle = useCallback((serviceName: string) => {
     const servicePermissions = groupedPermissions[serviceName];
+    if (!servicePermissions) return;
     const allSelected = servicePermissions.every(p => selectedPermissions.has(p.id!));
     
     setSelectedPermissions(prev => {
       const newSelected = new Set(prev);
       if (allSelected) {
-        servicePermissions.forEach(p => newSelected.delete(p.id!));
+        servicePermissions?.forEach(p => newSelected.delete(p.id!));
       } else {
-        servicePermissions.forEach(p => newSelected.add(p.id!));
+        servicePermissions?.forEach(p => newSelected.add(p.id!));
       }
       return newSelected;
     });
@@ -196,7 +222,6 @@ const RolePermissionModal = memo<RolePermissionModalProps>(function RolePermissi
       onClose={handleClose}
       title=""
       size="xl"
-      className="max-h-[90vh]"
     >
       <div className="relative -mx-6 -mt-6">
         {/* 헤더 */}
