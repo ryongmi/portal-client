@@ -6,9 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppDispatch } from '@/store/hooks';
 import { loginUser } from '@/store/slices/authSlice';
 import AuthGuard from '@/components/auth/AuthGuard';
+import { SecuritySession, SecurityLogger } from '@krgeobuk/http-client/security';
 import {
-  SecuritySession,
-  SecurityLogger,
   loginRateLimiter,
   validateUserInput,
   escapeHtml,
