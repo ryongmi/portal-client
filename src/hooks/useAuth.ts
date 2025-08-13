@@ -2,9 +2,15 @@ import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { initializeAuth } from '@/store/slices/authSlice';
 
-export const useAuth = () => {
+export const useAuth = (): {
+  user: { id: string; email?: string; name?: string; } | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  error: string | null;
+  isInitialized: boolean;
+} => {
   const dispatch = useAppDispatch();
-  const { user, accessToken, isAuthenticated, isLoading, error, isInitialized } = useAppSelector(
+  const { user, isAuthenticated, isLoading, error, isInitialized } = useAppSelector(
     (state) => state.auth
   );
 
@@ -16,7 +22,6 @@ export const useAuth = () => {
 
   return {
     user,
-    accessToken,
     isAuthenticated,
     isLoading,
     error,

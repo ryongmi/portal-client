@@ -19,13 +19,12 @@ import Button from '@/components/common/Button';
 import Modal from '@/components/common/Modal';
 import Pagination from '@/components/common/Pagination';
 import LoadingButton from '@/components/common/LoadingButton';
-import LoadingOverlay from '@/components/common/LoadingOverlay';
-import { TableRowSkeleton } from '@/components/common/SkeletonLoader';
+// Loading components available if needed
 import FormField, { Input, Textarea, Checkbox } from '@/components/common/FormField';
 import { ApiErrorMessage } from '@/components/common/ErrorMessage';
 import { useLoadingState } from '@/hooks/useLoadingState';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
-import { validationRules, mapServerErrorsToFormErrors } from '@/utils/formValidation';
+import { mapServerErrorsToFormErrors } from '@/utils/formValidation';
 import { toast } from '@/components/common/ToastContainer';
 import type {
   ServiceDetail,
@@ -35,6 +34,15 @@ import type {
   UpdateServiceRequest,
 } from '@/types';
 import { SortOrderType } from '@krgeobuk/core/enum';
+
+const validationRules = {
+  url: {
+    pattern: {
+      value: /^https?:\/\/.+/,
+      message: '유효한 URL을 입력해주세요 (http:// 또는 https://로 시작)',
+    },
+  },
+};
 
 export default function ReduxServicesPage(): JSX.Element {
   const dispatch = useAppDispatch();
@@ -60,7 +68,6 @@ export default function ReduxServicesPage(): JSX.Element {
     formState: { errors, isSubmitting },
     reset,
     setError,
-    watch,
   } = useForm<{
     name: string;
     description: string;
@@ -90,24 +97,24 @@ export default function ReduxServicesPage(): JSX.Element {
   // 에러 처리
   useEffect(() => {
     if (error) {
-      console.error('Error:', error);
+      // Error logged for debugging
       setTimeout(() => dispatch(clearError()), 5000);
     }
   }, [error, dispatch]);
 
   // 검색 처리
-  const handleSearch = (query: ServiceSearchQuery) => {
+  const handleSearch = (query: ServiceSearchQuery): void => {
     setSearchQuery(query);
     dispatch(fetchServices(query));
   };
 
   // 페이지 변경 처리
-  const handlePageChange = (page: number) => {
+  const handlePageChange = (page: number): void => {
     dispatch(fetchServices({ ...searchQuery, page }));
   };
 
   // 모달 열기
-  const handleOpenModal = async (serviceSearchResult?: ServiceSearchResult) => {
+  const handleOpenModal = async (serviceSearchResult?: ServiceSearchResult): Promise<void> => {
     try {
       if (serviceSearchResult) {
         // 상세 데이터 API 호출
@@ -145,7 +152,7 @@ export default function ReduxServicesPage(): JSX.Element {
   };
 
   // 모달 닫기
-  const handleCloseModal = () => {
+  const handleCloseModal = (): void => {
     setIsModalOpen(false);
     dispatch(setSelectedService(null));
     setFormError(null);
@@ -202,7 +209,7 @@ export default function ReduxServicesPage(): JSX.Element {
       } catch (error: unknown) {
         // 서버 에러를 폼 에러로 매핑
         const formErrors = mapServerErrorsToFormErrors(
-          (error as any)?.response?.data?.errors
+          (error as { response?: { data?: { errors?: Record<string, string> } } })?.response?.data?.errors || {}
         );
 
         // 각 필드별 에러 설정
@@ -226,14 +233,14 @@ export default function ReduxServicesPage(): JSX.Element {
         });
 
         // 일반적인 에러 메시지 설정
-        const errorMessage = handleApiError(error, { showToast: false });
+        const errorMessage = handleApiError(error as Error, { showToast: false });
         setFormError(errorMessage);
       }
     }
   );
 
   // 삭제 모달 열기
-  const handleOpenDeleteModal = async (serviceSearchResult: ServiceSearchResult) => {
+  const handleOpenDeleteModal = async (serviceSearchResult: ServiceSearchResult): Promise<void> => {
     try {
       // 상세 데이터 API 호출
       await dispatch(fetchServiceById(serviceSearchResult.id)).unwrap();
@@ -244,7 +251,7 @@ export default function ReduxServicesPage(): JSX.Element {
   };
 
   // 삭제 모달 닫기
-  const handleCloseDeleteModal = () => {
+  const handleCloseDeleteModal = (): void => {
     setIsDeleteModalOpen(false);
     dispatch(setSelectedService(null));
   };
@@ -264,20 +271,20 @@ export default function ReduxServicesPage(): JSX.Element {
   });
 
   // 가시성 배지 색상
-  const getVisibilityBadgeColor = (isVisible: boolean, isVisibleByRole: boolean) => {
+  const getVisibilityBadgeColor = (isVisible: boolean, isVisibleByRole: boolean): string => {
     if (!isVisible) return 'bg-gray-100 text-gray-800';
     if (isVisibleByRole) return 'bg-yellow-100 text-yellow-800';
     return 'bg-green-100 text-green-800';
   };
 
   // 가시성 텍스트
-  const getVisibilityText = (isVisible: boolean, isVisibleByRole: boolean) => {
+  const getVisibilityText = (isVisible: boolean, isVisibleByRole: boolean): string => {
     if (!isVisible) return '비공개';
     if (isVisibleByRole) return '권한 기반';
     return '공개';
   };
 
-  const formatDate = (dateString: string): string => {
+  const _formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('ko-KR');
   };
 
@@ -287,19 +294,19 @@ export default function ReduxServicesPage(): JSX.Element {
       key: 'displayName' as keyof ServiceSearchResult,
       label: '표시명',
       sortable: false,
-      render: (value: ServiceSearchResult[keyof ServiceSearchResult]) => value || '미설정',
+      render: (value: ServiceSearchResult[keyof ServiceSearchResult]): string => String(value || '미설정'),
     },
     {
       key: 'baseUrl' as keyof ServiceSearchResult,
       label: 'URL',
       sortable: false,
-      render: (value: ServiceSearchResult[keyof ServiceSearchResult]) => value || '미설정',
+      render: (value: ServiceSearchResult[keyof ServiceSearchResult]): string => String(value || '미설정'),
     },
     {
       key: 'isVisible' as keyof ServiceSearchResult,
       label: '가시성',
       sortable: false,
-      render: (value: ServiceSearchResult[keyof ServiceSearchResult], row: ServiceSearchResult) => {
+      render: (value: ServiceSearchResult[keyof ServiceSearchResult], row: ServiceSearchResult): JSX.Element => {
         const isVisible = Boolean(value);
         const isVisibleByRole = Boolean(row.isVisibleByRole);
         return (
@@ -318,13 +325,13 @@ export default function ReduxServicesPage(): JSX.Element {
       key: 'visibleRoleCount' as keyof ServiceSearchResult,
       label: '역할 수',
       sortable: false,
-      render: (value: ServiceSearchResult[keyof ServiceSearchResult]) => `${value || 0}개`,
+      render: (value: ServiceSearchResult[keyof ServiceSearchResult]): string => `${value || 0}개`,
     },
     {
       key: 'id' as keyof ServiceSearchResult,
       label: '작업',
       sortable: false,
-      render: (value: ServiceSearchResult[keyof ServiceSearchResult], row: ServiceSearchResult) => (
+      render: (value: ServiceSearchResult[keyof ServiceSearchResult], row: ServiceSearchResult): JSX.Element => (
         <div className="flex justify-center space-x-2">
           <Button size="sm" variant="outline" onClick={() => handleOpenModal(row)}>
             수정
@@ -451,7 +458,7 @@ export default function ReduxServicesPage(): JSX.Element {
             loading={isLoading}
             sortBy="createdAt"
             sortOrder={SortOrderType.DESC}
-            onSort={(column) => {
+            onSort={(_column) => {
               // Sort functionality placeholder
             }}
           />

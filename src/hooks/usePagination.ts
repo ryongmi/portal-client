@@ -18,15 +18,27 @@ export function usePagination({
   initialLimit = LimitType.THIRTY,
   initialSortBy = 'createdAt',
   initialSortOrder = SortOrderType.DESC,
-  onParamsChange
-}: UsePaginationProps = {}) {
+  onParamsChange: _onParamsChange
+}: UsePaginationProps = {}): {
+  page: number;
+  limit: LimitType;
+  sortBy: string;
+  sortOrder: SortOrderType;
+  searchFilters: SearchFilters;
+  goToPage: (newPage: number) => void;
+  changeLimit: (newLimit: LimitType) => void;
+  changeSort: (newSortBy: string, newSortOrder?: SortOrderType) => void;
+  updateSearch: (filters: SearchFilters) => void;
+  resetFilters: () => void;
+  params: PaginationQuery & SearchFilters;
+} {
   const [page, setPage] = useState<number>(initialPage)
   const [limit, setLimit] = useState<LimitType>(initialLimit)
   const [sortBy, setSortBy] = useState<string>(initialSortBy)
   const [sortOrder, setSortOrder] = useState<SortOrderType>(initialSortOrder)
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({})
 
-  const updateParams = useCallback((newParams: Partial<PaginationQuery & SearchFilters>): void => {
+  const _updateParams = useCallback((newParams: Partial<PaginationQuery & SearchFilters>): void => {
     // 검색 필터 분리
     const newFilters = Object.fromEntries(
       Object.entries(newParams).filter(([key]) => !['page', 'limit', 'sortBy', 'sortOrder'].includes(key))

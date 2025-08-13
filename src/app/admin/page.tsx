@@ -16,7 +16,7 @@ import ErrorMessage from '@/components/common/ErrorMessage';
 
 export default function AdminPage(): JSX.Element {
   const router = useRouter();
-  const { statistics, loading, error, lastUpdated, refetch, refreshSystemHealth } = useDashboard();
+  const { statistics, loading, error, lastUpdated, fetchStatistics, getSystemHealth } = useDashboard();
 
   if (loading && !statistics) {
     return (
@@ -34,7 +34,7 @@ export default function AdminPage(): JSX.Element {
     return (
       <AuthGuard>
         <Layout>
-          <ErrorMessage message={error} onRetry={refetch} />
+          <ErrorMessage message={error} onRetry={fetchStatistics} />
         </Layout>
       </AuthGuard>
     );
@@ -68,7 +68,7 @@ export default function AdminPage(): JSX.Element {
 
               <div className="text-right">
                 <button
-                  onClick={refetch}
+                  onClick={fetchStatistics}
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200"
                 >
                   새로고침
@@ -206,7 +206,7 @@ export default function AdminPage(): JSX.Element {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <SystemHealthCard
               systemHealth={statistics.analytics.systemHealth}
-              onRefresh={refreshSystemHealth}
+              onRefresh={getSystemHealth}
             />
 
             <div className="lg:col-span-2">

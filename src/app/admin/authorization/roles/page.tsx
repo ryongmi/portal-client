@@ -27,7 +27,7 @@ import { ApiErrorMessage } from '@/components/common/ErrorMessage';
 import RolePermissionModal from '@/components/modals/RolePermissionModal';
 import { useLoadingState } from '@/hooks/useLoadingState';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
-import { validationRules, mapServerErrorsToFormErrors } from '@/utils/formValidation';
+import { mapServerErrorsToFormErrors } from '@/utils/formValidation';
 import { toast } from '@/components/common/ToastContainer';
 import type {
   RoleDetail,
@@ -64,7 +64,6 @@ export default function ReduxRolesPage(): JSX.Element {
     formState: { errors, isSubmitting },
     reset,
     setError,
-    watch,
   } = useForm<{
     name: string;
     description?: string | null;
@@ -89,24 +88,24 @@ export default function ReduxRolesPage(): JSX.Element {
   // 에러 처리
   useEffect(() => {
     if (error) {
-      console.error('Error:', error);
+      // Error logged for debugging
       setTimeout(() => dispatch(clearError()), 5000);
     }
   }, [error, dispatch]);
 
   // 검색 처리 (useCallback으로 최적화)
-  const handleSearch = useCallback((query: RoleSearchQuery) => {
+  const handleSearch = useCallback((query: RoleSearchQuery): void => {
     setSearchQuery(query);
     dispatch(fetchRoles(query));
   }, [dispatch]);
 
   // 페이지 변경 처리 (useCallback으로 최적화)
-  const handlePageChange = useCallback((page: number) => {
+  const handlePageChange = useCallback((page: number): void => {
     dispatch(fetchRoles({ ...searchQuery, page }));
   }, [dispatch, searchQuery]);
 
   // 모달 열기
-  const handleOpenModal = async (roleSearchResult?: RoleSearchResult) => {
+  const handleOpenModal = async (roleSearchResult?: RoleSearchResult): Promise<void> => {
     try {
       if (roleSearchResult) {
         // 상세 데이터 API 호출
@@ -138,7 +137,7 @@ export default function ReduxRolesPage(): JSX.Element {
   };
 
   // 모달 닫기 (useCallback으로 최적화)
-  const handleCloseModal = useCallback(() => {
+  const handleCloseModal = useCallback((): void => {
     setIsModalOpen(false);
     dispatch(setSelectedRole(null));
     setFormError(null);
@@ -178,7 +177,7 @@ export default function ReduxRolesPage(): JSX.Element {
       } catch (error: unknown) {
         // 서버 에러를 폼 에러로 매핑
         const formErrors = mapServerErrorsToFormErrors(
-          (error as any)?.response?.data?.errors
+          (error as { response?: { data?: { errors?: Record<string, string> } } })?.response?.data?.errors || {}
         );
 
         // 각 필드별 에러 설정
@@ -201,14 +200,14 @@ export default function ReduxRolesPage(): JSX.Element {
         });
 
         // 일반적인 에러 메시지 설정
-        const errorMessage = handleApiError(error, { showToast: false });
+        const errorMessage = handleApiError(error as Error, { showToast: false });
         setFormError(errorMessage);
       }
     }
   );
 
   // 삭제 모달 열기
-  const handleOpenDeleteModal = async (roleSearchResult: RoleSearchResult) => {
+  const handleOpenDeleteModal = async (roleSearchResult: RoleSearchResult): Promise<void> => {
     try {
       // 상세 데이터 API 호출
       await dispatch(fetchRoleById(roleSearchResult.id)).unwrap();
@@ -225,7 +224,7 @@ export default function ReduxRolesPage(): JSX.Element {
   }, [dispatch]);
 
   // 권한 관리 모달 열기
-  const handleOpenPermissionModal = async (roleSearchResult: RoleSearchResult) => {
+  const handleOpenPermissionModal = async (roleSearchResult: RoleSearchResult): Promise<void> => {
     try {
       // 상세 데이터 API 호출
       await dispatch(fetchRoleById(roleSearchResult.id)).unwrap();
@@ -256,14 +255,14 @@ export default function ReduxRolesPage(): JSX.Element {
   });
 
   // 서비스 이름 가져오기 (useMemo로 최적화)
-  const getServiceName = useMemo(() => {
-    return (serviceId: string) => {
+  const _getServiceName = useMemo(() => {
+    return (serviceId: string): string => {
       const service = services.find((s) => s.id === serviceId);
       return service?.name || '알 수 없음';
     };
   }, [services]);
 
-  const formatDate = useCallback((dateString: string): string => {
+  const _formatDate = useCallback((dateString: string): string => {
     return new Date(dateString).toLocaleDateString('ko-KR');
   }, []);
 
@@ -278,7 +277,7 @@ export default function ReduxRolesPage(): JSX.Element {
       key: 'description' as keyof RoleSearchResult,
       label: '설명',
       sortable: false,
-      render: (value: RoleSearchResult[keyof RoleSearchResult]) => String(value || '설명 없음'),
+      render: (value: RoleSearchResult[keyof RoleSearchResult]): string => String(value || '설명 없음'),
     },
     {
       key: 'priority' as keyof RoleSearchResult,
@@ -289,13 +288,13 @@ export default function ReduxRolesPage(): JSX.Element {
       key: 'userCount' as keyof RoleSearchResult,
       label: '사용자 수',
       sortable: false,
-      render: (value: RoleSearchResult[keyof RoleSearchResult]) => String(`${value || 0}명`),
+      render: (value: RoleSearchResult[keyof RoleSearchResult]): string => String(`${value || 0}명`),
     },
     {
       key: 'service' as keyof RoleSearchResult,
       label: '서비스',
       sortable: false,
-      render: (value: RoleSearchResult[keyof RoleSearchResult]) => {
+      render: (value: RoleSearchResult[keyof RoleSearchResult]): JSX.Element => {
         const service = value as RoleSearchResult['service'];
         return (
           <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
@@ -308,7 +307,7 @@ export default function ReduxRolesPage(): JSX.Element {
       key: 'id' as keyof RoleSearchResult,
       label: '작업',
       sortable: false,
-      render: (value: RoleSearchResult[keyof RoleSearchResult], row: RoleSearchResult) => (
+      render: (_value: RoleSearchResult[keyof RoleSearchResult], row: RoleSearchResult): JSX.Element => (
         <div className="flex justify-center space-x-2">
           <Button size="sm" variant="outline" onClick={() => handleOpenModal(row)}>
             수정
@@ -448,7 +447,7 @@ export default function ReduxRolesPage(): JSX.Element {
                 loading={false}
                 sortBy="name"
                 sortOrder={SortOrderType.DESC}
-                onSort={(column) => {
+                onSort={(_column): void => {
                   // Sort functionality placeholder
                 }}
               />
@@ -459,7 +458,7 @@ export default function ReduxRolesPage(): JSX.Element {
           <Pagination
             pageInfo={pagination}
             onPageChange={handlePageChange}
-            onLimitChange={(limit) => {
+            onLimitChange={(limit): void => {
               handleSearch({ ...searchQuery, limit });
             }}
           />

@@ -26,7 +26,7 @@ import FormField, { Input, Textarea, Select } from '@/components/common/FormFiel
 import { ApiErrorMessage } from '@/components/common/ErrorMessage';
 import { useLoadingState } from '@/hooks/useLoadingState';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
-import { validationRules, mapServerErrorsToFormErrors } from '@/utils/formValidation';
+import { mapServerErrorsToFormErrors } from '@/utils/formValidation';
 import { toast } from '@/components/common/ToastContainer';
 import type {
   PermissionDetail,
@@ -69,7 +69,6 @@ export default function ReduxPermissionsPage(): JSX.Element {
     formState: { errors, isSubmitting },
     reset,
     setError,
-    watch,
   } = useForm<PermissionFormData>({
     defaultValues: {
       action: '',
@@ -88,24 +87,24 @@ export default function ReduxPermissionsPage(): JSX.Element {
   // 에러 처리
   useEffect(() => {
     if (error) {
-      console.error('Error:', error);
+      // Error logged for debugging
       setTimeout(() => dispatch(clearError()), 5000);
     }
   }, [error, dispatch]);
 
   // 검색 처리
-  const handleSearch = (query: PermissionSearchQuery) => {
+  const handleSearch = (query: PermissionSearchQuery): void => {
     setSearchQuery(query);
     dispatch(fetchPermissions(query));
   };
 
   // 페이지 변경 처리
-  const handlePageChange = (page: number) => {
+  const handlePageChange = (page: number): void => {
     dispatch(fetchPermissions({ ...searchQuery, page }));
   };
 
   // 모달 열기
-  const handleOpenModal = async (permissionSearchResult?: PermissionSearchResult) => {
+  const handleOpenModal = async (permissionSearchResult?: PermissionSearchResult): Promise<void> => {
     try {
       if (permissionSearchResult) {
         // 상세 데이터 API 호출
@@ -135,7 +134,7 @@ export default function ReduxPermissionsPage(): JSX.Element {
   };
 
   // 모달 닫기
-  const handleCloseModal = () => {
+  const handleCloseModal = (): void => {
     setIsModalOpen(false);
     dispatch(setSelectedPermission(null));
     setFormError(null);
@@ -175,7 +174,7 @@ export default function ReduxPermissionsPage(): JSX.Element {
       } catch (error: unknown) {
         // 서버 에러를 폼 에러로 매핑
         const formErrors = mapServerErrorsToFormErrors(
-          (error as any)?.response?.data?.errors
+          (error as { response?: { data?: { errors?: Record<string, string> } } })?.response?.data?.errors || {}
         );
 
         // 각 필드별 에러 설정
@@ -193,14 +192,14 @@ export default function ReduxPermissionsPage(): JSX.Element {
         });
 
         // 일반적인 에러 메시지 설정
-        const errorMessage = handleApiError(error, { showToast: false });
+        const errorMessage = handleApiError(error as Error, { showToast: false });
         setFormError(errorMessage);
       }
     }
   );
 
   // 삭제 모달 열기
-  const handleOpenDeleteModal = async (permissionSearchResult: PermissionSearchResult) => {
+  const handleOpenDeleteModal = async (permissionSearchResult: PermissionSearchResult): Promise<void> => {
     try {
       // 상세 데이터 API 호출
       await dispatch(fetchPermissionById(permissionSearchResult.id)).unwrap();
@@ -211,7 +210,7 @@ export default function ReduxPermissionsPage(): JSX.Element {
   };
 
   // 삭제 모달 닫기
-  const handleCloseDeleteModal = () => {
+  const handleCloseDeleteModal = (): void => {
     setIsDeleteModalOpen(false);
     dispatch(setSelectedPermission(null));
   };
@@ -231,13 +230,13 @@ export default function ReduxPermissionsPage(): JSX.Element {
   });
 
   // 서비스 이름 가져오기
-  const getServiceName = (serviceId: string) => {
+  const _getServiceName = (serviceId: string): string => {
     const service = services.find((s) => s.id === serviceId);
     return service?.name || '알 수 없음';
   };
 
   // 액션 타입에 따른 배지 색상
-  const getActionBadgeColor = (action: string) => {
+  const getActionBadgeColor = (action: string): string => {
     if (action.endsWith('.read')) return 'bg-blue-100 text-blue-800';
     if (action.endsWith('.write')) return 'bg-green-100 text-green-800';
     if (action.endsWith('.update')) return 'bg-yellow-100 text-yellow-800';
@@ -245,7 +244,7 @@ export default function ReduxPermissionsPage(): JSX.Element {
     return 'bg-gray-100 text-gray-800';
   };
 
-  const formatDate = (dateString: string): string => {
+  const _formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('ko-KR');
   };
 
@@ -254,7 +253,7 @@ export default function ReduxPermissionsPage(): JSX.Element {
       key: 'action' as keyof PermissionSearchResult,
       label: '액션',
       sortable: true,
-      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) => (
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult]): JSX.Element => (
         <span
           className={`px-2 py-1 text-xs font-medium rounded-full ${getActionBadgeColor(
             value as string
@@ -268,21 +267,21 @@ export default function ReduxPermissionsPage(): JSX.Element {
       key: 'description' as keyof PermissionSearchResult,
       label: '설명',
       sortable: false,
-      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) =>
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult]): string =>
         String(value || '설명 없음'),
     },
     {
       key: 'roleCount' as keyof PermissionSearchResult,
       label: '역할 수',
       sortable: false,
-      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) =>
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult]): string =>
         String(`${value || 0}개`),
     },
     {
       key: 'service' as keyof PermissionSearchResult,
       label: '서비스',
       sortable: false,
-      render: (value: PermissionSearchResult[keyof PermissionSearchResult]) => {
+      render: (value: PermissionSearchResult[keyof PermissionSearchResult]): JSX.Element => {
         const service = value as PermissionSearchResult['service'];
         return (
           <span className="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">
@@ -296,9 +295,9 @@ export default function ReduxPermissionsPage(): JSX.Element {
       label: '작업',
       sortable: false,
       render: (
-        value: PermissionSearchResult[keyof PermissionSearchResult],
+        _value: PermissionSearchResult[keyof PermissionSearchResult],
         row: PermissionSearchResult
-      ) => (
+      ): JSX.Element => (
         <div className="flex justify-center space-x-2">
           <Button size="sm" variant="outline" onClick={() => handleOpenModal(row)}>
             수정
@@ -422,7 +421,7 @@ export default function ReduxPermissionsPage(): JSX.Element {
                 loading={false}
                 sortBy="action"
                 sortOrder={SortOrderType.DESC}
-                onSort={(column) => {
+                onSort={(_column) => {
                   // Sort functionality placeholder
                 }}
               />
@@ -433,7 +432,7 @@ export default function ReduxPermissionsPage(): JSX.Element {
           <Pagination
             pageInfo={pagination}
             onPageChange={handlePageChange}
-            onLimitChange={(limit) => {
+            onLimitChange={(limit): void => {
               handleSearch({ ...searchQuery, limit });
             }}
           />

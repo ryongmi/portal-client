@@ -33,11 +33,11 @@ const Table = <T = Record<string, unknown>>({
   ...props
 }: TableProps<T>): JSX.Element => {
   // 정렬된 데이터 메모이제이션 (정렬 기능이 있을 때만)
-  const processedData = useMemo(() => {
+  const _processedData = useMemo(() => {
     if (!sortBy || !onSort) return data;
     // TODO: 실제 정렬 로직 구현 필요
     return data;
-  }, [data, sortBy, sortOrder]);
+  }, [data, sortBy, sortOrder, onSort]);
   if (loading) {
     return (
       <div 
@@ -236,7 +236,7 @@ interface TableRowProps<T> {
   index: number;
 }
 
-const TableRow = <T,>({ row, columns, index }: TableRowProps<T>) => (
+const TableRow = <T,>({ row, columns, index }: TableRowProps<T>): JSX.Element => (
   <tr
     className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200 focus-within:bg-blue-50"
     role="row"

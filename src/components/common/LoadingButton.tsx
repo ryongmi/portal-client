@@ -24,7 +24,7 @@ export const LoadingButton: React.FC<LoadingButtonProps> = ({
   onClick,
   ...buttonProps
 }) => {
-  const handleClick = () => {
+  const handleClick = (): void => {
     if (!isLoading && onClick) {
       onClick();
     }

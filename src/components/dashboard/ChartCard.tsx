@@ -37,7 +37,7 @@ const colorVariants = {
   },
 };
 
-export const ChartCard: React.FC<ChartCardProps> = ({ title, data, type, color, height = 200 }) => {
+export const ChartCard: React.FC<ChartCardProps> = ({ title, data, type: _type, color, height = 200 }) => {
   const colors = colorVariants[color];
 
   // 데이터가 없는 경우 처리
@@ -61,7 +61,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({ title, data, type, color, 
   }
 
   const maxValue = data?.length ? Math.max(...data.map((d) => d.count)) : 0;
-  const minValue = data?.length ? Math.min(...data.map((d) => d.count)) : 0;
+  const _minValue = data?.length ? Math.min(...data.map((d) => d.count)) : 0;
 
   // 간단한 차트 통계
   const totalValue = data?.reduce((sum, d) => sum + d.count, 0) || 0;

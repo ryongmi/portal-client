@@ -12,14 +12,14 @@ export const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-
 export const PHONE_REGEX = /^01[016789]-?\d{3,4}-?\d{4}$/;
 
 // URL 검증 정규식
-export const URL_REGEX = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)$/;
+export const URL_REGEX = /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/;
 
 /**
  * 일반적인 검증 규칙들
  */
 export const validationRules = {
   // 필수 입력
-  required: (fieldName: string) => ({
+  required: (fieldName: string): { required: string } => ({
     required: `${fieldName}을(를) 입력해주세요`,
   }),
 
@@ -46,9 +46,9 @@ export const validationRules = {
   },
 
   // 비밀번호 확인
-  confirmPassword: (password: string) => ({
+  confirmPassword: (password: string): { required: string; validate: (value: string) => string | boolean } => ({
     required: '비밀번호 확인을 입력해주세요',
-    validate: (value: string) =>
+    validate: (value: string): string | boolean =>
       value === password || '비밀번호가 일치하지 않습니다',
   }),
 
@@ -82,7 +82,7 @@ export const validationRules = {
   },
 
   // 숫자 범위
-  numberRange: (min: number, max: number) => ({
+  numberRange: (min: number, max: number): { min: { value: number; message: string }; max: { value: number; message: string } } => ({
     min: {
       value: min,
       message: `${min} 이상의 값을 입력해주세요`,
@@ -94,7 +94,7 @@ export const validationRules = {
   }),
 
   // 문자열 길이
-  stringLength: (min: number, max: number) => ({
+  stringLength: (min: number, max: number): { minLength: { value: number; message: string }; maxLength: { value: number; message: string } } => ({
     minLength: {
       value: min,
       message: `최소 ${min}자 이상 입력해주세요`,
@@ -178,32 +178,32 @@ export function getFieldErrorMessage(errors: Record<string, { message?: string }
  */
 export const customValidators = {
   // 한글만 허용
-  koreanOnly: (value: string) => {
+  koreanOnly: (value: string): string | boolean => {
     const koreanRegex = /^[가-힣\s]*$/;
     return koreanRegex.test(value) || '한글만 입력 가능합니다';
   },
 
   // 영문과 숫자만 허용
-  alphanumericOnly: (value: string) => {
+  alphanumericOnly: (value: string): string | boolean => {
     const alphanumericRegex = /^[a-zA-Z0-9]*$/;
     return alphanumericRegex.test(value) || '영문과 숫자만 입력 가능합니다';
   },
 
   // 특수문자 제외
-  noSpecialChars: (value: string) => {
+  noSpecialChars: (value: string): string | boolean => {
     const noSpecialRegex = /^[a-zA-Z0-9가-힣\s]*$/;
     return noSpecialRegex.test(value) || '특수문자는 입력할 수 없습니다';
   },
 
   // 파일 크기 검증 (바이트 단위)
-  fileSize: (maxSize: number) => (files: FileList) => {
+  fileSize: (maxSize: number): (files: FileList) => string | boolean => (files: FileList): string | boolean => {
     if (!files || files.length === 0) return true;
     const file = files[0];
     return file && file.size <= maxSize || `파일 크기는 ${Math.round(maxSize / 1024 / 1024)}MB 이하여야 합니다`;
   },
 
   // 파일 형식 검증
-  fileType: (allowedTypes: string[]) => (files: FileList) => {
+  fileType: (allowedTypes: string[]): (files: FileList) => string | boolean => (files: FileList): string | boolean => {
     if (!files || files.length === 0) return true;
     const file = files[0];
     const fileType = file?.type.toLowerCase() || '';

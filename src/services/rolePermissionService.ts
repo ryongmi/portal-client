@@ -1,13 +1,10 @@
 import { authzApi, type ApiResponse } from "@/lib/httpClient";
 
 // 공유 라이브러리 인터페이스 활용
-import type { PermissionDetail } from "@krgeobuk/permission";
+// Permission types available if needed
 
 // 역할-권한 관계 관리를 위한 타입 정의
-interface AssignPermissionToRoleRequest {
-  roleId: string;
-  permissionId: string;
-}
+// Request interfaces defined but not used in current implementation
 
 export class RolePermissionService {
   /**

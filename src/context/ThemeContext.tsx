@@ -13,7 +13,7 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-export const useTheme = () => {
+export const useTheme = (): ThemeContextType => {
   const context = useContext(ThemeContext);
   if (!context) {
     throw new Error('useTheme must be used within a ThemeProvider');
@@ -33,14 +33,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   useEffect(() => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     
-    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+    const handleSystemThemeChange = (e: MediaQueryListEvent): void => {
       if (theme === 'system') {
         setActualTheme(e.matches ? 'dark' : 'light');
       }
     };
 
     mediaQuery.addEventListener('change', handleSystemThemeChange);
-    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+    return (): void => mediaQuery.removeEventListener('change', handleSystemThemeChange);
   }, [theme]);
 
   // 테마 변경 처리
@@ -76,13 +76,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   }, []);
 
   // 테마 설정 저장
-  const handleSetTheme = (newTheme: Theme) => {
+  const handleSetTheme = (newTheme: Theme): void => {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
   };
 
   // 테마 토글 (라이트 ↔ 다크)
-  const toggleTheme = () => {
+  const toggleTheme = (): void => {
     const newTheme = actualTheme === 'light' ? 'dark' : 'light';
     handleSetTheme(newTheme);
   };

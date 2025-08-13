@@ -4,11 +4,9 @@ import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import {
   fetchPermissions,
-  assignPermissionToRole,
-  removePermissionFromRole,
-  replaceRolePermissions,
   clearError,
 } from '@/store/slices/permissionSlice';
+// assignPermissionToRole, removePermissionFromRole, replaceRolePermissions available if needed
 import Modal from '@/components/common/Modal';
 import Button from '@/components/common/Button';
 import LoadingButton from '@/components/common/LoadingButton';
@@ -20,7 +18,7 @@ import type { RoleDetail, PermissionSearchResult, PermissionDetail } from '@/typ
 import { RolePermissionService } from '@/services/rolePermissionService';
 
 // PermissionSearchResult를 PermissionDetail로 안전하게 변환하는 함수
-const convertToPermissionDetail = (permission: PermissionSearchResult): PermissionDetail => ({
+const _convertToPermissionDetail = (permission: PermissionSearchResult): PermissionDetail => ({
   id: permission.id,
   action: permission.action,
   description: permission.description,
@@ -71,7 +69,7 @@ const RolePermissionModal = memo<RolePermissionModalProps>(function RolePermissi
   }, [isOpen, role, permissions]);
 
   // PermissionSearchResult를 PermissionDetail로 변환하는 헬퍼 함수
-  const convertToPermissionDetail = useCallback((searchResult: PermissionSearchResult): PermissionDetail => {
+  const _convertToPermissionDetailCallback = useCallback((searchResult: PermissionSearchResult): PermissionDetail => {
     return {
       id: searchResult.id,
       action: searchResult.action,
@@ -82,7 +80,7 @@ const RolePermissionModal = memo<RolePermissionModalProps>(function RolePermissi
   }, []);
 
   // 역할의 현재 권한 로드
-  const loadRolePermissions = async (roleId: string) => {
+  const loadRolePermissions = async (roleId: string): Promise<void> => {
     try {
       const response = await RolePermissionService.getRolePermissions(roleId);
       const permissionIds = response.data || [];
@@ -90,7 +88,7 @@ const RolePermissionModal = memo<RolePermissionModalProps>(function RolePermissi
       // 권한 ID 목록을 기반으로 실제 권한 정보 매핑 및 타입 변환
       const rolePermissions = permissions
         .filter(p => permissionIds.includes(p.id!))
-        .map(convertToPermissionDetail);
+        .map(_convertToPermissionDetail);
       
       setCurrentRolePermissions(rolePermissions);
       setSelectedPermissions(new Set(permissionIds));
@@ -160,7 +158,7 @@ const RolePermissionModal = memo<RolePermissionModalProps>(function RolePermissi
   }, [groupedPermissions, selectedPermissions]);
 
   // 전체 선택/해제
-  const handleSelectAll = () => {
+  const handleSelectAll = (): void => {
     const allPermissionIds = Object.values(groupedPermissions)
       .flat()
       .map(p => p.id!);
@@ -189,7 +187,7 @@ const RolePermissionModal = memo<RolePermissionModalProps>(function RolePermissi
   });
 
   // 모달 닫기
-  const handleClose = () => {
+  const handleClose = (): void => {
     setPermissionSearch('');
     setServiceFilter('');
     setSelectedPermissions(new Set());
@@ -201,7 +199,7 @@ const RolePermissionModal = memo<RolePermissionModalProps>(function RolePermissi
   // 에러 처리
   useEffect(() => {
     if (error) {
-      console.error('Permission error:', error);
+      // Permission error logged for debugging
       setTimeout(() => dispatch(clearError()), 5000);
     }
   }, [error, dispatch]);

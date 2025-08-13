@@ -78,10 +78,10 @@ function rateLimit(ip: string, maxRequests: number = 100, windowMs: number = 600
   return current.count <= maxRequests;
 }
 
-export function middleware(request: NextRequest) {
+export function middleware(request: NextRequest): NextResponse {
   const response = NextResponse.next();
   const pathname = request.nextUrl.pathname;
-  const ip = (request as any).ip || request.headers.get('x-forwarded-for') || '127.0.0.1';
+  const ip = (request as { ip?: string }).ip || request.headers.get('x-forwarded-for') || '127.0.0.1';
 
   // Rate Limiting 적용
   if (!rateLimit(ip, 100, 60000)) {
@@ -102,7 +102,7 @@ export function middleware(request: NextRequest) {
 
   // CSRF 토큰 검증 (POST, PUT, DELETE 요청)
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(request.method)) {
-    const csrfToken = request.headers.get('X-CSRF-Token');
+    const _csrfToken = request.headers.get('X-CSRF-Token');
     const referer = request.headers.get('referer');
     const origin = request.headers.get('origin');
 
@@ -121,7 +121,7 @@ export function middleware(request: NextRequest) {
       );
 
       if (!isValidOrigin) {
-        console.warn('Invalid origin/referer:', { origin, referer, pathname });
+        // Invalid origin/referer detected
         return new NextResponse('Forbidden', {
           status: 403,
           headers: securityHeaders,

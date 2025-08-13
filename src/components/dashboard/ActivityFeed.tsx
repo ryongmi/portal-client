@@ -58,7 +58,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
 }) => {
   const displayActivities = activities.slice(0, maxItems);
 
-  const formatTimeAgo = (timestamp: string) => {
+  const formatTimeAgo = (timestamp: string): string => {
     const now = new Date();
     const activityTime = new Date(timestamp);
     const diffInMinutes = Math.floor((now.getTime() - activityTime.getTime()) / (1000 * 60));

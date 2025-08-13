@@ -1,7 +1,7 @@
 // 공유 패키지에서 임포트
 import type { ResponseFormat } from '@krgeobuk/core/interfaces';
 import type { PaginatedResult, PaginateBaseOptions } from '@krgeobuk/core/interfaces';
-import type { LimitType, SortOrderType } from '@krgeobuk/core/enum';
+// Limit and sort types are re-exported below for actual use
 
 // 공유 패키지 타입 재사용 (값으로도 사용 가능하게 import)
 export { LimitType, SortOrderType } from '@krgeobuk/core/enum';

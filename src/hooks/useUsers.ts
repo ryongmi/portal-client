@@ -1,9 +1,18 @@
 import { useState, useCallback } from 'react';
 import { UserService } from '@/services/userService';
 import type { UserSearchQuery, UserSearchResult, UserDetail } from '@krgeobuk/user';
-import type { PaginatedResult } from '@krgeobuk/core';
+// Paginated result type available if needed
 
-export function useUsers() {
+export function useUsers(): {
+  users: UserSearchResult[];
+  loading: boolean;
+  error: string | null;
+  fetchUsers: (query?: UserSearchQuery) => Promise<{ items: UserSearchResult[] }>;
+  getUserById: (id: string) => Promise<UserDetail>;
+  updateProfile: (profileData: { nickname: string; profileImageUrl: string }) => Promise<unknown>;
+  changePassword: (passwordData: { currentPassword: string; newPassword: string }) => Promise<void>;
+  deleteAccount: () => Promise<void>;
+} {
   const [users, setUsers] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

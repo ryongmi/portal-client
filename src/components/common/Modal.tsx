@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useEffect, useRef } from 'react'
+import { ReactNode, useEffect } from 'react'
 import { useFocusManagement } from '@/hooks/useFocusManagement'
 
 interface ModalProps {

@@ -7,7 +7,6 @@ import type {
   ServiceSearchQuery,
   CreateServiceRequest,
   UpdateServiceRequest,
-  RoleIdsRequest,
 } from '@/types';
 import type { ApiResponse, PaginatedResponse } from '@/lib/httpClient';
 import type { PaginatedResultBase } from '@krgeobuk/core/interfaces';

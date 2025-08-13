@@ -18,7 +18,7 @@ portal-client는 krgeobuk 생태계를 위한 통합 포털 클라이언트로, 
 ### 개발
 ```bash
 # 개발 서버 시작
-npm run dev                # Next.js 개발 서버 (포트 3000)
+npm run dev                # Next.js 개발 서버 (포트 3200)
 
 # 빌드
 npm run build              # 프로덕션 빌드

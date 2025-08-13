@@ -2,32 +2,29 @@
 
 import React, { createContext, useContext, useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { store } from "@/store";
-import { loginUser, signupUser, logoutUser, fetchUserProfile, initializeAuth, setOAuthToken, clearUser } from "@/store/slices/authSlice";
+import { logoutUser, fetchUserProfile, initializeAuth, clearUser } from "@/store/slices/authSlice";
 import { tokenManager } from "@/lib/httpClient";
-import type { User, LoginRequest, SignupRequest } from "@/types";
+import type { User } from "@/types";
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   isLoggedIn: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (userData: SignupRequest) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }): JSX.Element {
   const dispatch = useAppDispatch();
   const { user, isAuthenticated, isLoading, error, isInitialized } = useAppSelector((state) => state.auth);
   const initializeRef = useRef(false);
 
   // 초기 인증 상태 확인 (쿠키 기반)
   useEffect(() => {
-    const checkInitialAuth = async () => {
+    const checkInitialAuth = async (): Promise<void> => {
       // 이미 초기화되었거나 진행 중이면 스킵 (StrictMode 대응)
       if (isInitialized || isLoading || initializeRef.current) {
         return;
@@ -37,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       try {
         await dispatch(initializeAuth()).unwrap();
-      } catch (error) {
+      } catch (_error) {
         // 인증되지 않은 사용자
       } finally {
         // 초기화 완료 후 플래그 해제
@@ -46,49 +43,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     // TokenManager 이벤트 리스너 설정
-    const handleTokenCleared = () => {
+    const handleTokenCleared = (): void => {
       dispatch(clearUser());
     };
 
-    const handleTokenExpired = () => {
-      dispatch(clearUser());
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('tokenCleared', handleTokenCleared);
-      window.addEventListener('tokenExpired', handleTokenExpired);
-    }
-
-    checkInitialAuth();
-
-    // 클리너업 함수
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('tokenCleared', handleTokenCleared);
-        window.removeEventListener('tokenExpired', handleTokenExpired);
+    const handleTokenUpdated = (event: CustomEvent): void => {
+      // 새 토큰이 설정되면 사용자 정보 갱신
+      if (event.detail?.accessToken && !user) {
+        dispatch(fetchUserProfile());
       }
     };
-  }, [dispatch, isInitialized, isLoading]);
 
-  // 로그인
-  const login = async (email: string, password: string) => {
-    const loginData: LoginRequest = { email, password };
-    await dispatch(loginUser(loginData)).unwrap();
-  };
+    // 이벤트 리스너 등록
+    window.addEventListener('tokenCleared', handleTokenCleared);
+    window.addEventListener('tokenUpdated', handleTokenUpdated as EventListener);
 
-  // 회원가입
-  const signup = async (userData: SignupRequest) => {
-    await dispatch(signupUser(userData)).unwrap();
-  };
+    // 초기 인증 확인
+    checkInitialAuth();
+
+    return (): void => {
+      window.removeEventListener('tokenCleared', handleTokenCleared);
+      window.removeEventListener('tokenUpdated', handleTokenUpdated as EventListener);
+    };
+  }, [dispatch, isInitialized, isLoading, user]);
 
   // 로그아웃
-  const logout = async () => {
-    await dispatch(logoutUser()).unwrap();
+  const logout = async (): Promise<void> => {
+    try {
+      await dispatch(logoutUser()).unwrap();
+    } catch (_error) {
+      // 로그아웃 실패 오류 로그
+      // 로그아웃 실패해도 클라이언트 상태는 초기화
+      dispatch(clearUser());
+      tokenManager.clearAccessToken();
+    }
   };
 
-  // 사용자 정보 갱신
-  const refreshUser = async () => {
-    await dispatch(fetchUserProfile()).unwrap();
+  // 사용자 정보 새로고침
+  const refreshUser = async (): Promise<void> => {
+    try {
+      await dispatch(fetchUserProfile()).unwrap();
+    } catch (_error) {
+      // 사용자 정보 새로고침 실패 오류 로그
+    }
   };
 
   const value: AuthContextType = {
@@ -96,8 +93,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading: isLoading,
     isLoggedIn: isAuthenticated,
     error,
-    login,
-    signup,
     logout,
     refreshUser,
   };
@@ -105,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");

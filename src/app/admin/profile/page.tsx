@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import Layout from '@/components/layout/Layout';
@@ -63,7 +63,7 @@ export default function ProfilePage(): JSX.Element {
   // 프로필 정보 저장
   const onProfileSubmit = withLoading(
     'profileSave',
-    async (data: ProfileFormData) => {
+    async (_data: ProfileFormData) => {
       try {
         setProfileError(null);
         

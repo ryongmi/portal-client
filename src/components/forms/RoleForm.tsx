@@ -6,7 +6,7 @@ import Modal from '@/components/common/Modal';
 import Button from '@/components/common/Button';
 import { Role, Permission } from '@/types';
 import { useAppSelector } from '@/store/hooks';
-import type { Service } from '@/types';
+// Service type available if needed
 
 interface RoleFormData {
   name: string;
@@ -55,7 +55,7 @@ export default function RoleForm({
     },
   });
 
-  const watchedServiceId = watch('serviceId');
+  const _watchedServiceId = watch('serviceId');
 
   useEffect(() => {
     if (role) {

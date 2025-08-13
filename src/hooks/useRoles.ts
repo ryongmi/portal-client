@@ -2,8 +2,7 @@ import { useState, useCallback } from 'react';
 import { RoleService } from '@/services/roleService';
 import { RolePermissionService } from '@/services/rolePermissionService';
 import type { RoleSearchQuery, RoleSearchResult, RoleDetail } from '@krgeobuk/role';
-import type { PermissionDetail } from '@krgeobuk/permission';
-import type { PaginatedResult } from '@krgeobuk/core';
+// Permission types available if needed in future
 
 interface CreateRoleData {
   name: string;
@@ -19,7 +18,20 @@ interface UpdateRoleData {
   serviceId?: string;
 }
 
-export function useRoles() {
+export function useRoles(): {
+  roles: RoleSearchResult[];
+  loading: boolean;
+  error: string | null;
+  fetchRoles: (query?: RoleSearchQuery) => Promise<{ items: RoleSearchResult[] }>;
+  getRoleById: (id: string) => Promise<RoleDetail>;
+  createRole: (roleData: CreateRoleData) => Promise<unknown>;
+  updateRole: (id: string, roleData: UpdateRoleData) => Promise<unknown>;
+  deleteRole: (id: string) => Promise<void>;
+  getRolePermissions: (roleId: string) => Promise<string[]>;
+  assignPermissionToRole: (roleId: string, permissionId: string) => Promise<void>;
+  removePermissionFromRole: (roleId: string, permissionId: string) => Promise<void>;
+  assignMultiplePermissionsToRole: (roleId: string, permissionIds: string[]) => Promise<void>;
+} {
   const [roles, setRoles] = useState<RoleSearchResult[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);

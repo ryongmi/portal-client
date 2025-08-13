@@ -10,33 +10,41 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuToggle }: HeaderProps): JSX.Element {
-  const router = useRouter()
+  const _router = useRouter()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent): void => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false)
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
-    return () => {
+    return (): void => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
 
-  const handleLogout = () => {
-    // 로그아웃 처리
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('refreshToken')
+  const handleLogout = async (): Promise<void> => {
+    try {
+      // auth-server로 로그아웃 요청 (쿠키 삭제 포함)
+      await fetch(`${process.env.NEXT_PUBLIC_AUTH_SERVER_URL}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include', // 쿠키 포함
+      });
+    } catch (_error) {
+      // 로그아웃 요청 실패 오류 로그
+    }
+    
+    // 클라이언트 상태 정리 (SSO로 리다이렉트)
     setIsUserMenuOpen(false)
-    router.push('/auth/login')
+    window.location.href = '/'
   }
 
-  const toggleUserMenu = () => {
+  const toggleUserMenu = (): void => {
     setIsUserMenuOpen(!isUserMenuOpen)
   }
 

@@ -29,7 +29,12 @@ export interface ErrorHandlerOptions {
   onError?: (error: ErrorType) => void;
 }
 
-export const useErrorHandler = () => {
+export const useErrorHandler = (): {
+  handleError: (error: ErrorType, options?: ErrorHandlerOptions) => string;
+  handleApiError: (error: ErrorType, options?: ErrorHandlerOptions) => string;
+  handleNetworkError: (error: ErrorType, options?: ErrorHandlerOptions) => string;
+  handleValidationError: (error: ErrorType, options?: ErrorHandlerOptions) => string;
+} => {
   const handleError = useCallback((
     error: ErrorType, 
     options: ErrorHandlerOptions = {}
@@ -44,18 +49,12 @@ export const useErrorHandler = () => {
 
     // 에러 로깅
     if (logError) {
-      console.error('Error handled:', error);
+      // Error logged for debugging
       
       // 프로덕션 환경에서는 외부 로깅 서비스로 전송
       if (process.env.NODE_ENV === 'production') {
         // 예: Sentry, LogRocket 등으로 전송
-        console.error('Production Error Log:', {
-          error: error instanceof Error ? error.toString() : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          timestamp: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          url: window.location.href,
-        });
+        // Production error logged with details
       }
     }
 

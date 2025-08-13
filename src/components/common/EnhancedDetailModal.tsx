@@ -48,7 +48,7 @@ export default function EnhancedDetailModal({
     red: 'bg-gradient-to-r from-red-500 to-red-600'
   }
 
-  const getBadgeColor = (color: string) => {
+  const getBadgeColor = (color: string): string => {
     const colors = {
       blue: 'bg-blue-100 text-blue-800 border-blue-200',
       green: 'bg-green-100 text-green-800 border-green-200',
@@ -60,7 +60,7 @@ export default function EnhancedDetailModal({
     return colors[color as keyof typeof colors] || colors.gray
   }
 
-  const renderFieldValue = (field: DetailField) => {
+  const renderFieldValue = (field: DetailField): JSX.Element => {
     if (!field.value) return <span className="text-gray-400">-</span>
 
     switch (field.type) {
@@ -73,7 +73,7 @@ export default function EnhancedDetailModal({
       case 'date':
         return <span className="text-gray-900 font-mono text-sm">{field.value}</span>
       case 'component':
-        return field.value
+        return field.value as JSX.Element
       default:
         return <span className="text-gray-900">{field.value}</span>
     }

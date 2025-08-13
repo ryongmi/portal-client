@@ -6,7 +6,6 @@ import type {
   PermissionSearchQuery,
   CreatePermissionRequest,
   UpdatePermissionRequest,
-  PermissionIdsRequest,
   CheckPermissionRequest,
   PermissionCheckResponse,
   PermissionDetail,

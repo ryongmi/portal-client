@@ -6,6 +6,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
 
 import type { OAuthAccountProviderType } from '@krgeobuk/shared/oauth';
+import Image from 'next/image';
 
 interface OAuthBadgeProps {
   provider: OAuthAccountProviderType;
@@ -89,7 +90,7 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, hasGoogleAuth }) => 
 
         {service.iconUrl && (
           <div className="ml-3">
-            <img src={service.iconUrl} alt={`${service.name} icon`} className="w-8 h-8 rounded" />
+            <Image src={service.iconUrl} alt={`${service.name} icon`} className="w-8 h-8 rounded" />
           </div>
         )}
       </div>
@@ -175,7 +176,7 @@ export const UserProfileCard: React.FC = () => {
 
           {userProfile.profileImageUrl && (
             <div className="ml-6">
-              <img
+              <Image
                 src={userProfile.profileImageUrl}
                 alt={`${userProfile.name} 프로필`}
                 className="w-16 h-16 rounded-full object-cover"
@@ -289,3 +290,4 @@ export const UserProfileCard: React.FC = () => {
     </div>
   );
 };
+

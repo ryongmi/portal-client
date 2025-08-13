@@ -32,7 +32,7 @@ const SearchFilters = memo<SearchFiltersProps>(function SearchFilters({ fields, 
       setDebouncedFilters(filters)
     }, 500)
 
-    return () => clearTimeout(timer)
+    return (): void => clearTimeout(timer)
   }, [filters])
 
   // 디바운싱된 필터가 변경될 때 부모 컴포넌트에 알림

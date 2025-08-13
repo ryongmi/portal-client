@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useAccessibility } from '@/hooks/useAccessibility';
 import Button from '@/components/common/Button';
 import Modal from '@/components/common/Modal';

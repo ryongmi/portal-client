@@ -4,7 +4,7 @@ interface LoadingState {
   [key: string]: boolean;
 }
 
-export const useLoadingState = (initialState: LoadingState = {}) => {
+export const useLoadingState = (initialState: LoadingState = {}): { loadingStates: LoadingState; setLoading: (key: string, isLoading: boolean) => void; isLoading: (key: string) => boolean; isAnyLoading: () => boolean; withLoading: <T extends unknown[], R>(key: string, fn: (...args: T) => Promise<R>) => (...args: T) => Promise<R>; resetLoading: () => void } => {
   const [loadingStates, setLoadingStates] = useState<LoadingState>(initialState);
 
   const setLoading = useCallback((key: string, isLoading: boolean) => {

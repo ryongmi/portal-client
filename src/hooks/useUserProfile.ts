@@ -36,7 +36,7 @@ export const useUserProfile = (): UseUserProfileReturn => {
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '사용자 프로필을 불러오는데 실패했습니다.';
       setError(errorMessage);
-      console.error('사용자 프로필 조회 실패:', err);
+      // Error logged for debugging
     } finally {
       setLoading(false);
     }

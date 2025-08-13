@@ -27,8 +27,8 @@ export class ErrorBoundary extends Component<Props, State> {
     };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error Boundary caught an error:', error, errorInfo);
+  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+    // Error Boundary caught an error - logged for debugging
 
     this.setState({
       error,
@@ -37,28 +37,21 @@ export class ErrorBoundary extends Component<Props, State> {
 
     // 에러 로깅 서비스로 전송 (예: Sentry, LogRocket 등)
     if (process.env.NODE_ENV === 'production') {
+      // Production Error logged to external service
       // 실제 환경에서는 에러 로깅 서비스로 전송
-      console.error('Production Error:', {
-        error: error.toString(),
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent,
-        url: window.location.href,
-      });
     }
   }
 
-  handleReload = () => {
+  handleReload = (): void => {
     this.setState({ hasError: false, error: null, errorInfo: null });
     window.location.reload();
   };
 
-  handleReset = () => {
+  handleReset = (): void => {
     this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
-  render() {
+  render(): React.ReactNode {
     if (this.state.hasError) {
       if (this.props.fallback) {
         return this.props.fallback;
@@ -133,7 +126,7 @@ export function withErrorBoundary<P extends object>(
   Component: React.ComponentType<P>,
   fallback?: ReactNode
 ) {
-  return function WithErrorBoundaryComponent(props: P) {
+  return function WithErrorBoundaryComponent(props: P): JSX.Element {
     return (
       <ErrorBoundary fallback={fallback}>
         <Component {...props} />

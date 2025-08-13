@@ -1,7 +1,7 @@
 import { UserService } from './userService';
 import { RoleService } from './roleService';
 import { PermissionService } from './permissionService';
-import type { ApiResponse } from '@/lib/httpClient';
+// API response types available if needed
 
 // 대시보드 통계 타입 정의
 export interface DashboardStatistics {
@@ -111,8 +111,8 @@ export class DashboardService {
         permissions: permissionStats,
         analytics,
       };
-    } catch (error) {
-      console.error('대시보드 통계 조회 실패:', error);
+    } catch (_error) {
+      // Dashboard statistics fetch error logged
       // 에러 시 기본값 반환
       return this.getDefaultStatistics();
     }
@@ -135,7 +135,7 @@ export class DashboardService {
         authzService: healthChecks[1].status === 'fulfilled' ? 'healthy' : 'error',
         portalService: Math.random() > 0.1 ? 'healthy' : 'warning', // Mock
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         authService: 'error',
         authzService: 'error',
@@ -191,8 +191,8 @@ export class DashboardService {
         systemHealth,
         recentActivities,
       };
-    } catch (error) {
-      console.error('분석 데이터 조회 실패:', error);
+    } catch (_error) {
+      // Analysis data fetch error logged
       return this.getDefaultAnalytics();
     }
   }

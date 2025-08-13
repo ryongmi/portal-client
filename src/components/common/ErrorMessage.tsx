@@ -26,7 +26,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
   dismissible = true,
   className = '',
 }) => {
-  const getIcon = () => {
+  const getIcon = (): JSX.Element => {
     switch (type) {
       case 'error':
         return (
@@ -79,7 +79,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
     }
   };
 
-  const getBgColor = () => {
+  const getBgColor = (): string => {
     switch (type) {
       case 'error':
         return 'bg-red-50 border-red-200';
@@ -90,7 +90,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
     }
   };
 
-  const getTextColor = () => {
+  const getTextColor = (): string => {
     switch (type) {
       case 'error':
         return 'text-red-800';

@@ -41,7 +41,7 @@ export const SystemHealthCard: React.FC<SystemHealthCardProps> = ({
   systemHealth,
   onRefresh
 }) => {
-  const getOverallHealth = () => {
+  const getOverallHealth = (): 'healthy' | 'warning' | 'error' => {
     const statuses = Object.values(systemHealth);
     if (statuses.includes('error')) return 'error';
     if (statuses.includes('warning')) return 'warning';

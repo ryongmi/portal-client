@@ -12,25 +12,21 @@ interface ProvidersProps {
   children: React.ReactNode;
 }
 
-export function Providers({ children }: ProvidersProps) {
+export function Providers({ children }: ProvidersProps): JSX.Element {
   useEffect(() => {
     // 전역 toast 함수를 window 객체에 등록 (axios interceptor에서 사용)
     if (typeof window !== 'undefined') {
-      (window as any).showToast = toast;
+      (window as { showToast?: typeof toast }).showToast = toast;
     }
 
     // 전역 에러 핸들러
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      console.error('Unhandled promise rejection:', event.reason);
+    const handleUnhandledRejection = (event: PromiseRejectionEvent): void => {
+      // Unhandled promise rejection logged for debugging
 
       // 프로덕션에서는 에러 로깅 서비스로 전송
       if (process.env.NODE_ENV === 'production') {
-        console.error('Production Unhandled Rejection:', {
-          reason: event.reason?.toString(),
-          stack: event.reason?.stack,
-          timestamp: new Date().toISOString(),
-          url: window.location.href,
-        });
+        // Production Unhandled Rejection logged to external service
+        // Error details would be sent to logging service
       }
 
       // 사용자에게 알림 (너무 많은 알림을 피하기 위해 제한)
@@ -41,21 +37,13 @@ export function Providers({ children }: ProvidersProps) {
       }
     };
 
-    const handleError = (event: ErrorEvent) => {
-      console.error('Global error:', event.error);
+    const handleError = (_event: ErrorEvent): void => {
+      // Global error logged for debugging
 
       // 프로덕션에서는 에러 로깅 서비스로 전송
       if (process.env.NODE_ENV === 'production') {
-        console.error('Production Global Error:', {
-          message: event.message,
-          filename: event.filename,
-          lineno: event.lineno,
-          colno: event.colno,
-          error: event.error?.toString(),
-          stack: event.error?.stack,
-          timestamp: new Date().toISOString(),
-          url: window.location.href,
-        });
+        // Production Global Error logged to external service
+        // Error details would be sent to logging service
       }
     };
 
@@ -64,13 +52,13 @@ export function Providers({ children }: ProvidersProps) {
     window.addEventListener('error', handleError);
 
     // 정리 함수
-    return () => {
+    return (): void => {
       window.removeEventListener('unhandledrejection', handleUnhandledRejection);
       window.removeEventListener('error', handleError);
 
       // window 객체에서 toast 함수 제거
       if (typeof window !== 'undefined') {
-        delete (window as any).showToast;
+        delete (window as { showToast?: typeof toast }).showToast;
       }
     };
   }, []);

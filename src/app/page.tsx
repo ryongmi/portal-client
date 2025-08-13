@@ -6,19 +6,28 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@/store/hooks';
 import { logoutUser } from '@/store/slices/authSlice';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import Image from 'next/image';
 
 export default function Home(): JSX.Element {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, isAuthenticated } = useAuth();
   const { availableServices, loading: servicesLoading, error: servicesError } = useUserProfile();
   const dispatch = useAppDispatch();
-  
+
+  // SSO 로그인 처리
+  const handleLogin = (): void => {
+    const returnUrl = typeof window !== 'undefined' ? window.location.pathname : '/';
+    const redirectUri = encodeURIComponent(`${window.location.origin}${returnUrl}`);
+    const ssoStartUrl = `${process.env.NEXT_PUBLIC_AUTH_SERVER_URL}/api/auth/login?redirect_uri=${redirectUri}`;
+    window.location.href = ssoStartUrl;
+  };
+
   // 인증된 사용자는 availableServices 사용, 미인증 사용자는 빈 배열
   const visibleServices = isAuthenticated ? availableServices : [];
 
   // 메뉴 외부 클릭 시 메뉴 닫기
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent): void => {
       const target = event.target as Element;
       if (userMenuOpen && !target.closest('.user-menu')) {
         setUserMenuOpen(false);
@@ -26,15 +35,15 @@ export default function Home(): JSX.Element {
     };
 
     document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    return (): void => document.removeEventListener('click', handleClickOutside);
   }, [userMenuOpen]);
 
   // 로그아웃 처리
-  const handleLogout = async () => {
+  const handleLogout = async (): Promise<void> => {
     try {
       await dispatch(logoutUser()).unwrap();
-    } catch (error) {
-      console.error('로그아웃 실패:', error);
+    } catch (_error) {
+      // 로그아웃 실패 오류 로그
     }
   };
 
@@ -67,18 +76,12 @@ export default function Home(): JSX.Element {
             <div className="flex items-center space-x-3">
               {!isAuthenticated ? (
                 <>
-                  <Link
-                    href="/auth/login"
-                    className="text-gray-600 hover:text-blue-700 font-medium transition-colors duration-200"
-                  >
-                    로그인
-                  </Link>
-                  <Link
-                    href="/auth/register"
+                  <button
+                    onClick={handleLogin}
                     className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-400 to-indigo-400 text-gray-800 text-sm font-medium rounded-lg hover:from-blue-500 hover:to-indigo-500 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
                   >
-                    회원가입
-                  </Link>
+                    로그인 / 회원가입
+                  </button>
                 </>
               ) : (
                 <>
@@ -293,7 +296,9 @@ export default function Home(): JSX.Element {
                 </div>
               ) : (
                 <>
-                  <div className="text-3xl font-bold text-blue-500 mb-2">{visibleServices.length}</div>
+                  <div className="text-3xl font-bold text-blue-500 mb-2">
+                    {visibleServices.length}
+                  </div>
                   <div className="text-sm text-gray-500">사용 가능한 서비스</div>
                 </>
               )}
@@ -375,7 +380,9 @@ export default function Home(): JSX.Element {
                 />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">서비스 목록을 불러올 수 없습니다</h3>
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+              서비스 목록을 불러올 수 없습니다
+            </h3>
             <p className="text-gray-500 mb-4">{servicesError}</p>
             <button
               onClick={() => window.location.reload()}
@@ -390,141 +397,146 @@ export default function Home(): JSX.Element {
         {(!isAuthenticated || (!servicesLoading && !servicesError)) && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {visibleServices.map((service, index) => (
-            <div
-              key={service.id}
-              className="group relative bg-white/85 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 hover:shadow-2xl hover:scale-105 transition-all duration-300 overflow-hidden"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              {/* 카드 배경 그라데이션 */}
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div
+                key={service.id}
+                className="group relative bg-white/85 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 hover:shadow-2xl hover:scale-105 transition-all duration-300 overflow-hidden"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                {/* 카드 배경 그라데이션 */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-              {/* 카드 테두리 효과 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+                {/* 카드 테두리 효과 */}
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
 
-              <div className="relative p-8">
-                {/* 헤더 */}
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      {service.iconUrl ? (
-                        <img
-                          src={service.iconUrl}
-                          alt={service.displayName || service.name}
-                          className="w-12 h-12 rounded-xl shadow-md"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center">
-                          <svg
-                            className="w-6 h-6 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                            />
-                          </svg>
-                        </div>
-                      )}
-                      <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-20 blur rounded-xl transition-opacity duration-300" />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-700 group-hover:text-blue-700 transition-colors duration-200">
-                        {service.displayName || service.name}
-                      </h3>
-                      <div className="flex items-center mt-2">
-                        <span
-                          className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${
-                            service.isVisibleByRole
-                              ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-800'
-                              : 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800'
-                          }`}
-                        >
-                          <svg
-                            className={`w-3 h-3 mr-1 ${
-                              service.isVisibleByRole ? 'text-orange-500' : 'text-green-500'
+                <div className="relative p-8">
+                  {/* 헤더 */}
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="relative">
+                        {service.iconUrl ? (
+                          <Image
+                            src={service.iconUrl}
+                            alt={(service.displayName || service.name) ?? ''}
+                            className="w-12 h-12 rounded-xl shadow-md"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center">
+                            <svg
+                              className="w-6 h-6 text-white"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                              />
+                            </svg>
+                          </div>
+                        )}
+                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-20 blur rounded-xl transition-opacity duration-300" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-700 group-hover:text-blue-700 transition-colors duration-200">
+                          {service.displayName || service.name}
+                        </h3>
+                        <div className="flex items-center mt-2">
+                          <span
+                            className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${
+                              service.isVisibleByRole
+                                ? 'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-800'
+                                : 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800'
                             }`}
-                            fill="currentColor"
-                            viewBox="0 0 20 20"
                           >
-                            <path
-                              fillRule="evenodd"
-                              d={
-                                service.isVisibleByRole
-                                  ? 'M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z'
-                                  : 'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z'
-                              }
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                          {service.isVisibleByRole ? '권한 기반' : '공개'}
-                        </span>
+                            <svg
+                              className={`w-3 h-3 mr-1 ${
+                                service.isVisibleByRole ? 'text-orange-500' : 'text-green-500'
+                              }`}
+                              fill="currentColor"
+                              viewBox="0 0 20 20"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d={
+                                  service.isVisibleByRole
+                                    ? 'M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z'
+                                    : 'M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z'
+                                }
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                            {service.isVisibleByRole ? '권한 기반' : '공개'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
+
+                  {/* 설명 */}
+                  <p className="text-gray-500 mb-8 leading-relaxed text-base">
+                    {service.description}
+                  </p>
+
+                  {/* 액션 버튼 */}
+                  <div className="flex justify-end">
+                    <a
+                      href={service.baseUrl || '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-400 to-indigo-400 text-gray-800 font-medium rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl group-hover:shadow-blue-500/25"
+                    >
+                      <span>서비스 이동</span>
+                      <svg
+                        className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
+                      </svg>
+                    </a>
+                  </div>
                 </div>
+              </div>
+            ))}
 
-                {/* 설명 */}
-                <p className="text-gray-500 mb-8 leading-relaxed text-base">
-                  {service.description}
-                </p>
-
-                {/* 액션 버튼 */}
-                <div className="flex justify-end">
-                  <a
-                    href={service.baseUrl || '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-400 to-indigo-400 text-gray-800 font-medium rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl group-hover:shadow-blue-500/25"
-                  >
-                    <span>서비스 이동</span>
+            {/* 서비스가 없을 때 (인증된 사용자) */}
+            {isAuthenticated &&
+              visibleServices.length === 0 &&
+              !servicesLoading &&
+              !servicesError && (
+                <div className="col-span-full text-center py-16">
+                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                     <svg
-                      className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+                      className="w-12 h-12 text-gray-400"
                       fill="none"
-                      viewBox="0 0 24 24"
                       stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
                       />
                     </svg>
-                  </a>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                    접근 가능한 서비스가 없습니다
+                  </h3>
+                  <p className="text-gray-500">현재 권한으로 이용 가능한 서비스가 없습니다.</p>
                 </div>
-              </div>
-            </div>
-            ))}
-            
-            {/* 서비스가 없을 때 (인증된 사용자) */}
-            {isAuthenticated && visibleServices.length === 0 && !servicesLoading && !servicesError && (
-              <div className="col-span-full text-center py-16">
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg
-                    className="w-12 h-12 text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-700 mb-2">접근 가능한 서비스가 없습니다</h3>
-                <p className="text-gray-500">현재 권한으로 이용 가능한 서비스가 없습니다.</p>
-              </div>
-            )}
+              )}
           </div>
         )}
 
@@ -548,12 +560,12 @@ export default function Home(): JSX.Element {
             </div>
             <h3 className="text-xl font-semibold text-gray-700 mb-2">로그인이 필요합니다</h3>
             <p className="text-gray-500 mb-6">서비스를 이용하려면 로그인하세요.</p>
-            <Link
-              href="/auth/login"
+            <button
+              onClick={handleLogin}
               className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-400 to-indigo-400 text-gray-800 font-medium rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
             >
               로그인하기
-            </Link>
+            </button>
           </div>
         )}
       </main>

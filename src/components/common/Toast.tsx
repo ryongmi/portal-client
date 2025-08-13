@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+// createPortal available if needed
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -32,27 +32,27 @@ export const Toast: React.FC<ToastProps> = ({
 
   useEffect(() => {
     // 마운트 애니메이션
-    const timer = setTimeout(() => setIsVisible(true), 10);
-    return () => clearTimeout(timer);
+    const timer = setTimeout((): void => setIsVisible(true), 10);
+    return (): void => clearTimeout(timer);
   }, []);
 
   useEffect(() => {
     if (duration > 0) {
-      const timer = setTimeout(() => {
+      const timer = setTimeout((): void => {
         handleClose();
       }, duration);
-      return () => clearTimeout(timer);
+      return (): void => clearTimeout(timer);
     }
   }, [duration]);
 
-  const handleClose = () => {
+  const handleClose = (): void => {
     setIsLeaving(true);
     setTimeout(() => {
       onClose(id);
     }, 300);
   };
 
-  const getIcon = () => {
+  const getIcon = (): JSX.Element => {
     switch (type) {
       case 'success':
         return (
@@ -81,7 +81,7 @@ export const Toast: React.FC<ToastProps> = ({
     }
   };
 
-  const getBorderColor = () => {
+  const getBorderColor = (): string => {
     switch (type) {
       case 'success':
         return 'border-l-green-500';
@@ -94,7 +94,7 @@ export const Toast: React.FC<ToastProps> = ({
     }
   };
 
-  const getBackgroundColor = () => {
+  const getBackgroundColor = (): string => {
     switch (type) {
       case 'success':
         return 'bg-green-50';

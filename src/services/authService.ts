@@ -1,60 +1,7 @@
 import { authApi, tokenManager, type ApiResponse } from "@/lib/httpClient";
-
-// 로컬 타입 사용
-import type { 
-  LoginRequest as AuthLoginRequest, 
-  LoginResponse as AuthLoginResponse, 
-  SignupRequest as AuthSignupRequest, 
-  RefreshResponse as AuthRefreshResponse 
-} from "@/types";
-import type { User as UserDetail } from "@/types";
-
-// 타입 별칭 정의 (명확성을 위해)
-type LoginRequest = AuthLoginRequest;
-type SignupRequest = AuthSignupRequest;
-type LoginResponse = AuthLoginResponse;
-type UserMeResponse = UserDetail;
-type RefreshResponse = AuthRefreshResponse;
+import type { User } from "@/types";
 
 export class AuthService {
-  /**
-   * 로그인
-   */
-  static async login(
-    credentials: LoginRequest
-  ): Promise<ApiResponse<LoginResponse>> {
-    const response = await authApi.post<ApiResponse<LoginResponse>>(
-      "/auth/login",
-      credentials
-    );
-
-    // 토큰 저장
-    if (response.data.data?.accessToken) {
-      tokenManager.setAccessToken(response.data.data.accessToken);
-    }
-
-    return response.data;
-  }
-
-  /**
-   * 회원가입
-   */
-  static async signup(
-    userData: SignupRequest
-  ): Promise<ApiResponse<LoginResponse>> {
-    const response = await authApi.post<ApiResponse<LoginResponse>>(
-      "/auth/signup",
-      userData
-    );
-
-    // 회원가입 성공 시 자동 로그인 처리
-    if (response.data.data?.accessToken) {
-      tokenManager.setAccessToken(response.data.data.accessToken);
-    }
-
-    return response.data;
-  }
-
   /**
    * 로그아웃
    */
@@ -68,44 +15,32 @@ export class AuthService {
   }
 
   /**
-   * 토큰 갱신
-   */
-  static async refresh(): Promise<ApiResponse<RefreshResponse>> {
-    const response = await authApi.post<ApiResponse<RefreshResponse>>(
-      "/auth/refresh"
-    );
-
-    // 새 토큰 저장
-    if (response.data.data?.accessToken) {
-      tokenManager.setAccessToken(response.data.data.accessToken);
-    }
-
-    return response.data;
-  }
-
-  /**
    * 현재 사용자 정보 조회
    */
-  static async getMe(): Promise<ApiResponse<UserMeResponse>> {
-    const response = await authApi.get<ApiResponse<UserMeResponse>>(
-      "/users/me"
-    );
-    return response.data;
+  static async getCurrentUser(): Promise<User> {
+    const response = await authApi.get<ApiResponse<User>>("/users/me");
+    return response.data.data;
   }
 
   /**
-   * 현재 로그인 상태 확인
+   * 현재 로그인 상태 확인 (토큰 존재 여부)
    */
   static isLoggedIn(): boolean {
-    return !!tokenManager.getAccessToken();
+    const token = tokenManager.getAccessToken();
+    return !!token && tokenManager.isValidToken(token);
   }
 
   /**
-   * OAuth 로그인 URL 생성
+   * 토큰 갱신 (shared-lib에서 자동 처리되므로 백업용)
    */
-  static getOAuthUrl(provider: "google" | "naver"): string {
-    const baseUrl =
-      process.env.NEXT_PUBLIC_AUTH_SERVER_URL || "http://localhost:8000/api";
-    return `${baseUrl}/oauth/login-${provider}`;
+  static async refreshToken(): Promise<string> {
+    try {
+      // shared-lib의 TokenManager를 통한 자동 갱신
+      return await tokenManager.refreshToken();
+    } catch (error) {
+      // 갱신 실패 시 로그아웃 처리
+      tokenManager.clearAccessToken();
+      throw error;
+    }
   }
 }

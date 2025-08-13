@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import Toast, { ToastProps, ToastType } from './Toast';
+import Toast, { ToastType } from './Toast';
 
 export interface ToastData {
   id: string;
@@ -31,7 +31,7 @@ let toastId = 0;
 const subscribers: Array<(toasts: ToastData[]) => void> = [];
 let toasts: ToastData[] = [];
 
-const notify = (data: Omit<ToastData, 'id'>) => {
+const notify = (data: Omit<ToastData, 'id'>): string => {
   const newToast: ToastData = {
     ...data,
     id: `toast-${++toastId}`,
@@ -44,31 +44,31 @@ const notify = (data: Omit<ToastData, 'id'>) => {
   return newToast.id;
 };
 
-const removeToast = (id: string) => {
+const removeToast = (id: string): void => {
   toasts = toasts.filter((toast) => toast.id !== id);
   subscribers.forEach((fn) => fn([...toasts]));
 };
 
-const clearAll = () => {
+const clearAll = (): void => {
   toasts = [];
   subscribers.forEach((fn) => fn([]));
 };
 
 // 편의 함수들
 const toast = {
-  success: (title: string, message?: string, options?: Partial<ToastData>) =>
+  success: (title: string, message?: string, options?: Partial<ToastData>): string =>
     notify({ type: 'success', title, message: message || '', ...options }),
 
-  error: (title: string, message?: string, options?: Partial<ToastData>) =>
+  error: (title: string, message?: string, options?: Partial<ToastData>): string =>
     notify({ type: 'error', title, message: message || '', duration: 8000, ...options }),
 
-  warning: (title: string, message?: string, options?: Partial<ToastData>) =>
+  warning: (title: string, message?: string, options?: Partial<ToastData>): string =>
     notify({ type: 'warning', title, message: message || '', duration: 6000, ...options }),
 
-  info: (title: string, message?: string, options?: Partial<ToastData>) =>
+  info: (title: string, message?: string, options?: Partial<ToastData>): string =>
     notify({ type: 'info', title, message: message || '', ...options }),
 
-  custom: (data: Omit<ToastData, 'id'>) => notify(data),
+  custom: (data: Omit<ToastData, 'id'>): string => notify(data),
 
   dismiss: removeToast,
   clear: clearAll,
@@ -84,13 +84,13 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
   useEffect(() => {
     setMounted(true);
 
-    const handleToastsChange = (newToasts: ToastData[]) => {
+    const handleToastsChange = (newToasts: ToastData[]): void => {
       setToastList(newToasts.slice(0, maxToasts));
     };
 
     subscribers.push(handleToastsChange);
 
-    return () => {
+    return (): void => {
       const index = subscribers.indexOf(handleToastsChange);
       if (index > -1) {
         subscribers.splice(index, 1);
@@ -98,7 +98,7 @@ export const ToastContainer: React.FC<ToastContainerProps> = ({
     };
   }, [maxToasts]);
 
-  const getPositionClasses = () => {
+  const getPositionClasses = (): string => {
     switch (position) {
       case 'top-right':
         return 'top-4 right-4';
