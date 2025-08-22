@@ -55,7 +55,7 @@ const securityHeaders = {
 };
 
 // 민감한 경로들
-const sensitiveRoutes = ['/admin', '/auth'];
+const sensitiveRoutes = ['/auth'];
 
 // Rate Limiting을 위한 간단한 메모리 저장소
 const rateLimitMap = new Map<string, { count: number; lastReset: number }>();

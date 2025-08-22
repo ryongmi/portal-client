@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 
@@ -64,18 +63,15 @@ export default function Header({ onMenuToggle }: HeaderProps): JSX.Element {
           
           {/* 로고 */}
           <div className="flex items-center">
-            <Link href="/" className="hover:opacity-80 transition-opacity">
+            <a href="/" className="hover:opacity-80 transition-opacity">
               <h1 className="text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100 cursor-pointer transition-colors duration-200">
-                KRGeobuk Portal Admin
+                KRGeobuk Portal
               </h1>
-            </Link>
+            </a>
           </div>
           
           {/* 사용자 정보 및 테마 토글 */}
           <div className="flex items-center space-x-4">
-            <div className="hidden md:block">
-              <span className="text-sm text-gray-600 dark:text-gray-300 transition-colors duration-200">관리자</span>
-            </div>
             
             {/* 테마 토글 */}
             <ThemeToggle variant="icon" size="md" />
@@ -100,15 +96,15 @@ export default function Header({ onMenuToggle }: HeaderProps): JSX.Element {
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
                         <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-sm font-medium">관</span>
+                          <span className="text-white text-sm font-medium">사</span>
                         </div>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                          관리자
+                          사용자
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          admin@krgeobuk.com
+                          user@krgeobuk.com
                         </p>
                       </div>
                     </div>
@@ -116,8 +112,8 @@ export default function Header({ onMenuToggle }: HeaderProps): JSX.Element {
 
                   {/* 메뉴 항목들 */}
                   <div className="py-1">
-                    <Link
-                      href="/admin/profile"
+                    <a
+                      href="#"
                       className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
                       onClick={() => setIsUserMenuOpen(false)}
                     >
@@ -125,10 +121,10 @@ export default function Header({ onMenuToggle }: HeaderProps): JSX.Element {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                       프로필 설정
-                    </Link>
+                    </a>
 
-                    <Link
-                      href="/admin/settings"
+                    <a
+                      href="#"
                       className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
                       onClick={() => setIsUserMenuOpen(false)}
                     >
@@ -136,11 +132,11 @@ export default function Header({ onMenuToggle }: HeaderProps): JSX.Element {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                       </svg>
-                      시스템 설정
-                    </Link>
+                      설정
+                    </a>
 
-                    <Link
-                      href="/admin/help"
+                    <a
+                      href="#"
                       className="flex items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
                       onClick={() => setIsUserMenuOpen(false)}
                     >
@@ -148,7 +144,7 @@ export default function Header({ onMenuToggle }: HeaderProps): JSX.Element {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       도움말
-                    </Link>
+                    </a>
                   </div>
 
                   <div className="border-t border-gray-200 dark:border-gray-700">
