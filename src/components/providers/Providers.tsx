@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { store } from '@/store';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ToastContainer, { toast } from '@/components/common/ToastContainer';
 
@@ -68,7 +69,9 @@ export function Providers({ children }: ProvidersProps): JSX.Element {
       <ThemeProvider>
         <Provider store={store}>
           <AuthProvider>
-            {children}
+            <AuthGuard requireAuth={false}>
+              {children}
+            </AuthGuard>
             <ToastContainer position="top-right" maxToasts={5} />
           </AuthProvider>
         </Provider>
