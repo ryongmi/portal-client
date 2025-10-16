@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { UserService } from '@/services/userService';
+import { userService } from '@/services/userService';
 import type { UserProfile } from '@krgeobuk/user/interfaces';
 
 interface UseUserProfileReturn {
@@ -30,11 +30,12 @@ export const useUserProfile = (): UseUserProfileReturn => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await UserService.getMyProfile();
-      setUserProfile(response.data);
+
+      const response = await userService.getMyProfile();
+      setUserProfile(response);
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : '사용자 프로필을 불러오는데 실패했습니다.';
+      const errorMessage =
+        err instanceof Error ? err.message : '사용자 프로필을 불러오는데 실패했습니다.';
       setError(errorMessage);
       // Error logged for debugging
     } finally {
@@ -49,7 +50,9 @@ export const useUserProfile = (): UseUserProfileReturn => {
   // 편의 함수들
   const hasGoogleAuthValue = userProfile ? userProfile.oauthAccount.provider === 'google' : false;
   const hasNaverAuthValue = userProfile ? userProfile.oauthAccount.provider === 'naver' : false;
-  const isHomepageUserValue = userProfile ? userProfile.oauthAccount.provider === 'homePage' : false;
+  const isHomepageUserValue = userProfile
+    ? userProfile.oauthAccount.provider === 'homePage'
+    : false;
 
   return {
     userProfile,
@@ -86,7 +89,7 @@ export const useRole = (role: string): boolean => {
  */
 export const usePermissions = (requiredPermissions: string[]): boolean => {
   const { permissions } = useUserProfile();
-  return requiredPermissions.every(permission => permissions.includes(permission));
+  return requiredPermissions.every((permission) => permissions.includes(permission));
 };
 
 /**
@@ -94,5 +97,5 @@ export const usePermissions = (requiredPermissions: string[]): boolean => {
  */
 export const useAnyRole = (roles: string[]): boolean => {
   const { roles: userRoles } = useUserProfile();
-  return roles.some(role => userRoles.includes(role));
+  return roles.some((role) => userRoles.includes(role));
 };

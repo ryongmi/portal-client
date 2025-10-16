@@ -1,4 +1,4 @@
-import { ErrorHandler, ServiceError } from './ErrorHandler';
+import { ErrorHandler } from './ErrorHandler';
 
 /**
  * 모든 Service 클래스의 기본 클래스
