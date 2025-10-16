@@ -17,7 +17,7 @@ export default function Home(): JSX.Element {
   const handleLogin = (): void => {
     const returnUrl = typeof window !== 'undefined' ? window.location.pathname : '/';
     const redirectUri = encodeURIComponent(`${window.location.origin}${returnUrl}`);
-    const ssoStartUrl = `${process.env.NEXT_PUBLIC_AUTH_SERVER_URL}/api/auth/login?redirect_uri=${redirectUri}`;
+    const ssoStartUrl = `${process.env.NEXT_PUBLIC_AUTH_SERVER_URL}/auth/login?redirect_uri=${redirectUri}`;
     window.location.href = ssoStartUrl;
   };
 
@@ -545,4 +545,3 @@ export default function Home(): JSX.Element {
     </div>
   );
 }
-

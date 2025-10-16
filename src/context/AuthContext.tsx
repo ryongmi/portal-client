@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
   useEffect(() => {
     const checkInitialAuth = async (): Promise<void> => {
       // 이미 초기화되었거나 진행 중이면 스킵 (StrictMode 대응)
-      if (isInitialized || isLoading || initializeRef.current) {
+      if (isInitialized || initializeRef.current) {
         return;
       }
 
@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
       window.removeEventListener('tokenCleared', handleTokenCleared);
       window.removeEventListener('tokenUpdated', handleTokenUpdated as EventListener);
     };
-  }, [dispatch, isInitialized, isLoading, user]);
+  }, [dispatch, isInitialized, user]);
 
   // 로그아웃
   const logout = async (): Promise<void> => {

@@ -1,8 +1,15 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { authApi } from '@/lib/httpClient';
-import type { User, UserSearchResult, UserDetail, UserSearchQuery, UpdateMyProfileRequest, ChangePasswordRequest } from '@/types';
-import type { ApiResponse, PaginatedResponse } from '@/lib/httpClient';
+import { userService } from '@/services/userService';
+import type {
+  User,
+  UserSearchResult,
+  UserDetail,
+  UserSearchQuery,
+  UpdateMyProfileRequest,
+  ChangePasswordRequest,
+} from '@/types';
 import type { PaginatedResultBase } from '@krgeobuk/core/interfaces';
+import type { ServiceError } from '@/services/base';
 
 interface UserState {
   users: UserSearchResult[];
@@ -34,18 +41,10 @@ export const fetchUsers = createAsyncThunk(
   'user/fetchUsers',
   async (query: UserSearchQuery = {}, { rejectWithValue }) => {
     try {
-      const response = await authApi.get<ApiResponse<PaginatedResponse<User>>>(
-        '/users?page=1&limit=30',
-        {
-          params: query,
-        }
-      );
-      return response.data.data;
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        axiosError.response?.data?.message || '사용자 목록을 불러올 수 없습니다.'
-      );
+      return await userService.getUsers(query);
+    } catch (error) {
+      const serviceError = error as ServiceError;
+      return rejectWithValue(serviceError.message);
     }
   }
 );
@@ -55,13 +54,10 @@ export const fetchUserById = createAsyncThunk(
   'user/fetchUserById',
   async (userId: string, { rejectWithValue }) => {
     try {
-      const response = await authApi.get<ApiResponse<UserDetail>>(`/users/${userId}`);
-      return response.data.data;
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(
-        axiosError.response?.data?.message || '사용자 정보를 불러올 수 없습니다.'
-      );
+      return await userService.getUserById(userId);
+    } catch (error) {
+      const serviceError = error as ServiceError;
+      return rejectWithValue(serviceError.message);
     }
   }
 );
@@ -71,11 +67,11 @@ export const updateMyProfile = createAsyncThunk(
   'user/updateMyProfile',
   async (profileData: UpdateMyProfileRequest, { rejectWithValue }) => {
     try {
-      await authApi.patch<ApiResponse<void>>('/users/me', profileData);
+      await userService.updateMyProfile(profileData);
       return profileData;
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(axiosError.response?.data?.message || '프로필 수정에 실패했습니다.');
+    } catch (error) {
+      const serviceError = error as ServiceError;
+      return rejectWithValue(serviceError.message);
     }
   }
 );
@@ -85,11 +81,11 @@ export const changePassword = createAsyncThunk(
   'user/changePassword',
   async (passwordData: ChangePasswordRequest, { rejectWithValue }) => {
     try {
-      await authApi.patch<ApiResponse<void>>('/users/password', passwordData);
+      await userService.changePassword(passwordData);
       return null;
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(axiosError.response?.data?.message || '비밀번호 변경에 실패했습니다.');
+    } catch (error) {
+      const serviceError = error as ServiceError;
+      return rejectWithValue(serviceError.message);
     }
   }
 );
@@ -99,11 +95,11 @@ export const deleteMyAccount = createAsyncThunk(
   'user/deleteMyAccount',
   async (_, { rejectWithValue }) => {
     try {
-      await authApi.delete<ApiResponse<void>>('/users/me');
+      await userService.deleteMyAccount();
       return null;
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(axiosError.response?.data?.message || '계정 삭제에 실패했습니다.');
+    } catch (error) {
+      const serviceError = error as ServiceError;
+      return rejectWithValue(serviceError.message);
     }
   }
 );

@@ -1,7 +1,8 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { authApi, tokenManager } from '@/lib/httpClient';
+import { tokenManager } from '@/lib/httpClient';
+import { authService } from '@/services/authService';
 import type { User } from '@/types';
-import type { ApiResponse } from '@/lib/httpClient';
+import type { ServiceError } from '@/services/base';
 
 interface AuthState {
   user: User | null;
@@ -20,53 +21,42 @@ const initialState: AuthState = {
 };
 
 // 로그아웃 비동기 액션
-export const logoutUser = createAsyncThunk(
-  'auth/logout',
-  async (_, { rejectWithValue }) => {
-    try {
-      await authApi.post('/auth/logout');
-      tokenManager.clearAccessToken();
-      return null;
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      tokenManager.clearAccessToken();
-      return rejectWithValue(axiosError.response?.data?.message || '로그아웃에 실패했습니다.');
-    }
+export const logoutUser = createAsyncThunk('auth/logout', async (_, { rejectWithValue }) => {
+  try {
+    await authService.logout();
+    return null;
+  } catch (error) {
+    const serviceError = error as ServiceError;
+    return rejectWithValue(serviceError.message);
   }
-);
+});
 
 // 사용자 정보 조회 비동기 액션
 export const fetchUserProfile = createAsyncThunk(
   'auth/fetchUserProfile',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await authApi.get<ApiResponse<User>>('/users/me');
-      return response.data.data;
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(axiosError.response?.data?.message || '사용자 정보를 불러올 수 없습니다.');
+      return await authService.getCurrentUser();
+    } catch (error) {
+      const serviceError = error as ServiceError;
+      return rejectWithValue(serviceError.message);
     }
   }
 );
 
-// 앱 초기화 비동기 액션 (토큰 확인 및 사용자 정보 조회)
+// 앱 초기화 비동기 액션 (사용자 정보 조회 - OptionalAccessTokenGuard가 자동으로 refresh 처리)
 export const initializeAuth = createAsyncThunk(
   'auth/initialize',
   async (_, { dispatch, rejectWithValue }) => {
     try {
-      const token = tokenManager.getAccessToken();
-      
-      if (token && tokenManager.isValidToken(token)) {
-        // 유효한 토큰이 있으면 사용자 정보 조회
-        const userResponse = await dispatch(fetchUserProfile()).unwrap();
-        return { user: userResponse };
-      } else {
-        // 토큰이 없거나 유효하지 않으면 미인증 상태
-        return { user: null };
-      }
-    } catch (error: unknown) {
-      const axiosError = error as { response?: { data?: { message?: string } } };
-      return rejectWithValue(axiosError.response?.data?.message || '초기화에 실패했습니다.');
+      // /users/me API 호출 (OptionalAccessTokenGuard가 RefreshToken으로 자동 갱신)
+      // AccessToken이 없어도 RefreshToken(쿠키)이 있으면 자동으로 갱신 후 사용자 정보 반환
+      const userResponse = await dispatch(fetchUserProfile()).unwrap();
+      return { user: userResponse };
+    } catch (error) {
+      // 인증 실패 (RefreshToken도 없거나 만료됨)
+      const serviceError = error as ServiceError;
+      return rejectWithValue(serviceError.message || '초기화에 실패했습니다.');
     }
   }
 );
@@ -115,7 +105,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.isInitialized = true;
         state.error = null;
-        
+
         if (action.payload.user) {
           state.user = action.payload.user;
           state.isAuthenticated = true;
@@ -170,12 +160,6 @@ const authSlice = createSlice({
   },
 });
 
-export const {
-  setUser,
-  clearUser,
-  setLoading,
-  setError,
-  clearError,
-} = authSlice.actions;
+export const { setUser, clearUser, setLoading, setError, clearError } = authSlice.actions;
 
 export default authSlice.reducer;
