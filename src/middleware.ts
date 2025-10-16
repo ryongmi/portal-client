@@ -10,7 +10,7 @@ const securityHeaders = {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self' https://localhost:8000 https://localhost:8100 https://localhost:8200 https://*.krgeobuk.com",
+    "connect-src 'self' http://*.krgeobuk.local:* https://*.krgeobuk.local:* https://*.krgeobuk.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -81,7 +81,8 @@ function rateLimit(ip: string, maxRequests: number = 100, windowMs: number = 600
 export function middleware(request: NextRequest): NextResponse {
   const response = NextResponse.next();
   const pathname = request.nextUrl.pathname;
-  const ip = (request as { ip?: string }).ip || request.headers.get('x-forwarded-for') || '127.0.0.1';
+  const ip =
+    (request as { ip?: string }).ip || request.headers.get('x-forwarded-for') || '127.0.0.1';
 
   // Rate Limiting 적용
   if (!rateLimit(ip, 100, 60000)) {
@@ -157,7 +158,7 @@ export function middleware(request: NextRequest): NextResponse {
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: https: http:",
       "font-src 'self' data:",
-      "connect-src 'self' http://localhost:* https://localhost:* ws://localhost:* wss://localhost:*",
+      "connect-src 'self' http://localhost:* https://localhost:* http://*.krgeobuk.local:* https://*.krgeobuk.local:* ws://localhost:* wss://localhost:*",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
