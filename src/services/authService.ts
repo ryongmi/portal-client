@@ -1,5 +1,5 @@
-import { authApi, tokenManager, type ApiResponse } from '@/lib/httpClient';
-import type { User } from '@/types';
+import { authApi, tokenManager } from '@/lib/httpClient';
+import type { UserProfile } from '@krgeobuk/user/interfaces';
 import { BaseService } from './base';
 
 /**
@@ -23,12 +23,34 @@ export class AuthService extends BaseService {
   }
 
   /**
-   * 현재 사용자 정보 조회
+   * 클라이언트 초기화 (RefreshToken으로 AccessToken 및 사용자 정보 반환)
+   * 페이지 로드 시 한 번만 호출하여 인증 상태 복원
    */
-  async getCurrentUser(): Promise<User> {
+  async initialize(): Promise<{ accessToken: string; user: UserProfile; isLogin: boolean }> {
     try {
-      const response = await authApi.get<ApiResponse<User>>('users/me');
-      return response.data.data;
+      const response = await authApi.post<{ accessToken: string; user: UserProfile }>(
+        '/auth/initialize'
+      );
+
+      const { accessToken, user } = response.data;
+      const { isLogin } = response;
+
+      // AccessToken을 TokenManager에 저장
+      tokenManager.setAccessToken(accessToken);
+
+      return { accessToken, user, isLogin };
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
+   * 현재 사용자 정보 조회 (OAuth, 권한, 서비스 정보 포함)
+   */
+  async getCurrentUser(): Promise<UserProfile> {
+    try {
+      const response = await authApi.get<UserProfile>('users/me');
+      return response.data;
     } catch (error) {
       this.handleError(error);
     }

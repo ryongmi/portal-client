@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { userService } from '@/services/userService';
+import { useAppSelector, useAppDispatch } from '@/store/hooks';
+import { fetchUserProfile } from '@/store/slices/authSlice';
 import type { UserProfile } from '@krgeobuk/user/interfaces';
 
 interface UseUserProfileReturn {
@@ -17,35 +17,23 @@ interface UseUserProfileReturn {
 
 /**
  * 통합 사용자 프로필 관리 훅
+ * - Redux Store에서 사용자 프로필 정보를 가져옴 (API 호출 없음)
  * - OAuth 정보, 권한 정보, 서비스 목록을 포함한 완전한 사용자 프로필
  * - 구글/네이버 인증 상태 확인 유틸리티 제공
  * - 접근 가능한 서비스 목록 제공
  */
 export const useUserProfile = (): UseUserProfileReturn => {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const dispatch = useAppDispatch();
+  const { user: userProfile, isLoading: loading, error } = useAppSelector((state) => state.auth);
 
-  const fetchUserProfile = useCallback(async () => {
+  // refetch 함수 - Redux action을 dispatch하여 API 호출
+  const refetch = async (): Promise<void> => {
     try {
-      setLoading(true);
-      setError(null);
-
-      const response = await userService.getMyProfile();
-      setUserProfile(response);
-    } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error ? err.message : '사용자 프로필을 불러오는데 실패했습니다.';
-      setError(errorMessage);
-      // Error logged for debugging
-    } finally {
-      setLoading(false);
+      await dispatch(fetchUserProfile()).unwrap();
+    } catch (_err) {
+      // Error handled by Redux
     }
-  }, []);
-
-  useEffect(() => {
-    fetchUserProfile();
-  }, [fetchUserProfile]);
+  };
 
   // 편의 함수들
   const hasGoogleAuthValue = userProfile ? userProfile.oauthAccount.provider === 'google' : false;
@@ -58,7 +46,7 @@ export const useUserProfile = (): UseUserProfileReturn => {
     userProfile,
     loading,
     error,
-    refetch: fetchUserProfile,
+    refetch,
     hasGoogleAuth: hasGoogleAuthValue,
     hasNaverAuth: hasNaverAuthValue,
     isHomepageUser: isHomepageUserValue,

@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import React, { createContext, useContext, useEffect, useRef } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { logoutUser, fetchUserProfile, initializeAuth, clearUser } from "@/store/slices/authSlice";
-import { tokenManager } from "@/lib/httpClient";
-import type { User } from "@/types";
+import React, { createContext, useContext, useEffect, useRef } from 'react';
+import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { logoutUser, fetchUserProfile, initializeAuth, clearUser } from '@/store/slices/authSlice';
+import { tokenManager } from '@/lib/httpClient';
+import type { UserProfile } from '@krgeobuk/user/interfaces';
 
 interface AuthContextType {
-  user: User | null;
+  user: UserProfile | null;
   loading: boolean;
   isLoggedIn: boolean;
   error: string | null;
@@ -19,7 +19,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }): JSX.Element {
   const dispatch = useAppDispatch();
-  const { user, isAuthenticated, isLoading, error, isInitialized } = useAppSelector((state) => state.auth);
+  const { user, isAuthenticated, isLoading, error, isInitialized } = useAppSelector(
+    (state) => state.auth
+  );
   const initializeRef = useRef(false);
 
   // 초기 인증 상태 확인 (쿠키 기반)
@@ -47,25 +49,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
       dispatch(clearUser());
     };
 
-    const handleTokenUpdated = (event: CustomEvent): void => {
-      // 새 토큰이 설정되면 사용자 정보 갱신
-      if (event.detail?.accessToken && !user) {
-        dispatch(fetchUserProfile());
-      }
-    };
+    // const handleTokenUpdated = (_event: CustomEvent): void => {
+    //   // 토큰이 업데이트되었을 때의 처리
+    //   // initialize에서 이미 사용자 정보를 받아오므로 추가 호출 불필요
+    // };
 
     // 이벤트 리스너 등록
     window.addEventListener('tokenCleared', handleTokenCleared);
-    window.addEventListener('tokenUpdated', handleTokenUpdated as EventListener);
+    // window.addEventListener('tokenUpdated', handleTokenUpdated as EventListener);
 
     // 초기 인증 확인
     checkInitialAuth();
 
     return (): void => {
       window.removeEventListener('tokenCleared', handleTokenCleared);
-      window.removeEventListener('tokenUpdated', handleTokenUpdated as EventListener);
+      // window.removeEventListener('tokenUpdated', handleTokenUpdated as EventListener);
     };
-  }, [dispatch, isInitialized, user]);
+  }, [dispatch, isInitialized]);
 
   // 로그아웃
   const logout = async (): Promise<void> => {
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }

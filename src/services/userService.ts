@@ -23,11 +23,10 @@ export class UserService extends BaseService {
    */
   async getUsers(query: UserSearchQuery = {}): Promise<PaginatedResult<UserSearchResult>> {
     try {
-      const response = await authApi.get<ApiResponse<PaginatedResult<UserSearchResult>>>(
-        '/users',
-        { params: query }
-      );
-      return response.data.data;
+      const response = await authApi.get<PaginatedResult<UserSearchResult>>('/users', {
+        params: query,
+      });
+      return response.data;
     } catch (error) {
       this.handleError(error);
     }
@@ -38,8 +37,8 @@ export class UserService extends BaseService {
    */
   async getUserById(id: string): Promise<UserDetail> {
     try {
-      const response = await authApi.get<ApiResponse<UserDetail>>(`/users/${id}`);
-      return response.data.data;
+      const response = await authApi.get<UserDetail>(`/users/${id}`);
+      return response.data;
     } catch (error) {
       this.handleError(error);
     }
@@ -50,8 +49,8 @@ export class UserService extends BaseService {
    */
   async getMe(): Promise<UserDetail> {
     try {
-      const response = await authApi.get<ApiResponse<UserDetail>>('/users/me');
-      return response.data.data;
+      const response = await authApi.get<UserDetail>('/users/me');
+      return response.data;
     } catch (error) {
       this.handleError(error);
     }
@@ -66,8 +65,8 @@ export class UserService extends BaseService {
    */
   async getMyProfile(): Promise<UserProfile> {
     try {
-      const response = await authApi.get<ApiResponse<UserProfile>>('/users/me');
-      return response.data.data;
+      const response = await authApi.get<UserProfile>('/users/me');
+      return response.data;
     } catch (error) {
       this.handleError(error);
     }
@@ -78,8 +77,8 @@ export class UserService extends BaseService {
    */
   async updateMyProfile(profileData: UpdateMyProfile): Promise<UserDetail> {
     try {
-      const response = await authApi.patch<ApiResponse<UserDetail>>('/users/me', profileData);
-      return response.data.data;
+      const response = await authApi.patch<UserDetail>('/users/me', profileData);
+      return response.data;
     } catch (error) {
       this.handleError(error);
     }
@@ -90,7 +89,7 @@ export class UserService extends BaseService {
    */
   async changePassword(passwordData: ChangePassword): Promise<void> {
     try {
-      await authApi.patch<ApiResponse<null>>('/users/me/password', passwordData);
+      await authApi.patch<null>('/users/me/password', passwordData);
     } catch (error) {
       this.handleError(error);
     }
@@ -101,7 +100,7 @@ export class UserService extends BaseService {
    */
   async deleteMyAccount(): Promise<void> {
     try {
-      await authApi.delete<ApiResponse<null>>('/users/me');
+      await authApi.delete<null>('/users/me');
     } catch (error) {
       this.handleError(error);
     }

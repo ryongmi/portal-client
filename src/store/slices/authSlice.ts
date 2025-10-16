@@ -1,11 +1,11 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 // import { tokenManager } from '@/lib/httpClient';
 import { authService } from '@/services/authService';
-import type { User } from '@/types';
+import type { UserProfile } from '@krgeobuk/user/interfaces';
 import type { ServiceError } from '@/services/base';
 
 interface AuthState {
-  user: User | null;
+  user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
@@ -44,17 +44,16 @@ export const fetchUserProfile = createAsyncThunk(
   }
 );
 
-// 앱 초기화 비동기 액션 (사용자 정보 조회 - OptionalAccessTokenGuard가 자동으로 refresh 처리)
+// 앱 초기화 비동기 액션 (RefreshToken으로 AccessToken + 사용자 정보 한번에 조회)
 export const initializeAuth = createAsyncThunk(
   'auth/initialize',
-  async (_, { dispatch, rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      // /users/me API 호출 (OptionalAccessTokenGuard가 RefreshToken으로 자동 갱신)
-      // AccessToken이 없어도 RefreshToken(쿠키)이 있으면 자동으로 갱신 후 사용자 정보 반환
-      const userResponse = await dispatch(fetchUserProfile()).unwrap();
-      return { user: userResponse };
+      // /auth/initialize API 호출 (RefreshToken으로 AccessToken + 사용자 정보 반환)
+      const { accessToken, user, isLogin } = await authService.initialize();
+      return { accessToken, user, isLogin };
     } catch (error) {
-      // 인증 실패 (RefreshToken도 없거나 만료됨)
+      // 인증 실패 (RefreshToken이 없거나 만료됨)
       const serviceError = error as ServiceError;
       return rejectWithValue(serviceError.message || '초기화에 실패했습니다.');
     }
@@ -66,7 +65,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     // 사용자 정보 설정
-    setUser: (state, action: PayloadAction<User>) => {
+    setUser: (state, action: PayloadAction<UserProfile>) => {
       state.user = action.payload;
       state.isAuthenticated = true;
       state.error = null;
@@ -106,7 +105,8 @@ const authSlice = createSlice({
         state.isInitialized = true;
         state.error = null;
 
-        if (action.payload.user) {
+        // isLogin 플래그를 우선 기준으로 인증 상태 판단
+        if (action.payload.isLogin && action.payload.user) {
           state.user = action.payload.user;
           state.isAuthenticated = true;
         } else {
