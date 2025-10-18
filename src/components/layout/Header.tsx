@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuToggle, showMobileMenu = false }: HeaderProps = {}): JSX.Element {
-  const _router = useRouter()
+  const router = useRouter()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
@@ -118,7 +118,7 @@ export default function Header({ onMenuToggle, showMobileMenu = false }: HeaderP
                     <button
                       onClick={() => {
                         setIsUserMenuOpen(false);
-                        // TODO: 프로필 페이지로 이동
+                        router.push('/profile');
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-left"
                     >
@@ -131,7 +131,7 @@ export default function Header({ onMenuToggle, showMobileMenu = false }: HeaderP
                     <button
                       onClick={() => {
                         setIsUserMenuOpen(false);
-                        // TODO: 설정 페이지로 이동
+                        router.push('/settings');
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-left"
                     >
@@ -145,7 +145,7 @@ export default function Header({ onMenuToggle, showMobileMenu = false }: HeaderP
                     <button
                       onClick={() => {
                         setIsUserMenuOpen(false);
-                        // TODO: 도움말 페이지로 이동
+                        router.push('/help');
                       }}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-left"
                     >
