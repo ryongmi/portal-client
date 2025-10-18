@@ -4,6 +4,7 @@ import React from 'react';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { formatDate, getRelativeTime } from '@/utils/dateFormat';
 
 import type { OAuthAccountProviderType } from '@krgeobuk/shared/oauth';
 import Image from 'next/image';
@@ -239,6 +240,23 @@ export const UserProfileCard: React.FC = () => {
 
             {userProfile.nickname && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">닉네임: {userProfile.nickname}</p>
+            )}
+
+            {/* 가입일 정보 */}
+            {userProfile.createdAt && (
+              <div className="flex items-center space-x-2 mt-2 text-sm text-gray-500 dark:text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+                <span>{formatDate(userProfile.createdAt)} 가입</span>
+                <span className="text-gray-400 dark:text-gray-500">·</span>
+                <span>{getRelativeTime(userProfile.createdAt)}</span>
+              </div>
             )}
 
             <div className="flex items-center space-x-4 mt-4">
