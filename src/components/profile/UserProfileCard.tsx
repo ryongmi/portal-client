@@ -62,41 +62,121 @@ const ServiceCard: React.FC<ServiceCardProps> = ({ service, hasGoogleAuth }) => 
   const requiresGoogleAuth = service.name?.includes('유튜브') || false;
   const isAccessible = !requiresGoogleAuth || hasGoogleAuth;
 
+  const handleServiceOpen = (e: React.MouseEvent) => {
+    if (!isAccessible || !service.baseUrl) return;
+
+    e.preventDefault();
+    window.open(service.baseUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if ((e.key === 'Enter' || e.key === ' ') && isAccessible && service.baseUrl) {
+      e.preventDefault();
+      window.open(service.baseUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   return (
     <div
-      className={`p-4 rounded-lg border transition-all duration-200 ${
-        isAccessible
-          ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-500 hover:shadow-md cursor-pointer'
-          : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 opacity-60'
+      onClick={handleServiceOpen}
+      onKeyDown={handleKeyDown}
+      tabIndex={isAccessible && service.baseUrl ? 0 : -1}
+      role={isAccessible && service.baseUrl ? 'button' : 'article'}
+      aria-label={`${service.displayName || service.name} 서비스${isAccessible ? ' - 클릭하여 열기' : ' - 접근 불가'}`}
+      className={`min-h-[200px] p-6 rounded-xl border-2 transition-all duration-200 flex flex-col ${
+        isAccessible && service.baseUrl
+          ? 'bg-gradient-to-br from-white to-blue-50/30 dark:from-gray-800 dark:to-blue-900/10 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:shadow-xl hover:scale-[1.02] cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900'
+          : 'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700 opacity-60 cursor-not-allowed'
       }`}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h4 className="font-medium text-gray-900 dark:text-gray-100">
-            {service.displayName || service.name || 'Unknown Service'}
-          </h4>
-          {service.description && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{service.description}</p>
-          )}
-
-          {requiresGoogleAuth && !hasGoogleAuth && (
-            <div className="mt-2">
-              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
-                ⚠️ Google 인증 필요
-              </span>
-            </div>
-          )}
-        </div>
-
-        {service.iconUrl && (
-          <div className="ml-3">
+      {/* 상단: 아이콘 및 상태 배지 */}
+      <div className="flex items-start justify-between mb-4">
+        {service.iconUrl ? (
+          <div className="flex-shrink-0">
             <Image
               src={service.iconUrl}
               alt={`${service.name} icon`}
-              width={32}
-              height={32}
-              className="w-8 h-8 rounded"
+              width={48}
+              height={48}
+              className="w-12 h-12 rounded-lg shadow-sm"
             />
+          </div>
+        ) : (
+          <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center shadow-sm">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+        )}
+
+        {/* 상태 배지 */}
+        <div className="flex-shrink-0">
+          {isAccessible ? (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              접근 가능
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800">
+              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+              </svg>
+              인증 필요
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* 중앙: 서비스 정보 */}
+      <div className="flex-1">
+        <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+          {service.displayName || service.name || 'Unknown Service'}
+        </h4>
+        {service.description ? (
+          <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+            {service.description}
+          </p>
+        ) : (
+          <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+            서비스 설명이 없습니다
+          </p>
+        )}
+      </div>
+
+      {/* 하단: 액션 영역 */}
+      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+        {requiresGoogleAuth && !hasGoogleAuth ? (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-yellow-700 dark:text-yellow-300 font-medium">
+              ⚠️ Google 계정 연결 필요
+            </span>
+            <button
+              disabled
+              className="px-3 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-lg cursor-not-allowed"
+            >
+              접근 불가
+            </button>
+          </div>
+        ) : service.baseUrl ? (
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500 dark:text-gray-400 truncate mr-2">
+              {new URL(service.baseUrl).hostname}
+            </span>
+            <button
+              onClick={handleServiceOpen}
+              className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors duration-200 flex items-center space-x-1"
+            >
+              <span>서비스 열기</span>
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <div className="text-xs text-gray-400 dark:text-gray-500 italic">
+            서비스 URL이 설정되지 않았습니다
           </div>
         )}
       </div>
@@ -246,15 +326,38 @@ export const UserProfileCard: React.FC = () => {
         </h3>
 
         {availableServices.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {availableServices.map((service) => (
               <ServiceCard key={service.id} service={service} hasGoogleAuth={hasGoogleAuth} />
             ))}
           </div>
         ) : (
-          <div className="text-center py-8">
-            <p className="text-gray-500 dark:text-gray-400">사용 가능한 서비스가 없습니다.</p>
-            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">관리자에게 서비스 접근 권한을 요청하세요.</p>
+          <div className="text-center py-16">
+            {/* 일러스트레이션 */}
+            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full flex items-center justify-center">
+              <svg className="w-12 h-12 text-blue-500 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
+
+            {/* 메시지 */}
+            <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              아직 이용 가능한 서비스가 없어요
+            </h4>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+              서비스 접근 권한이 필요합니다. 관리자에게 문의하여 필요한 서비스 권한을 요청해주세요.
+            </p>
+
+            {/* 액션 버튼 */}
+            <a
+              href="mailto:support@krgeobuk.com?subject=서비스 접근 권한 요청"
+              className="inline-flex items-center px-5 py-2.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              관리자에게 문의하기
+            </a>
           </div>
         )}
       </div>
