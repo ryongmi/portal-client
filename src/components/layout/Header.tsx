@@ -2,7 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
+import { useUserProfile } from '@/hooks/useUserProfile'
 
 interface HeaderProps {
   onMenuToggle?: () => void
@@ -11,6 +13,7 @@ interface HeaderProps {
 
 export default function Header({ onMenuToggle, showMobileMenu = false }: HeaderProps = {}): JSX.Element {
   const router = useRouter()
+  const { userProfile } = useUserProfile()
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
@@ -82,13 +85,25 @@ export default function Header({ onMenuToggle, showMobileMenu = false }: HeaderP
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={toggleUserMenu}
-                className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
                 aria-expanded={isUserMenuOpen}
                 aria-haspopup="true"
               >
-                <svg className="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
+                {userProfile?.profileImageUrl ? (
+                  <Image
+                    src={userProfile.profileImageUrl}
+                    alt={userProfile.name || '사용자'}
+                    width={40}
+                    height={40}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-colors duration-200"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600 transition-colors duration-200">
+                    <svg className="h-6 w-6 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                )}
               </button>
 
               {/* 드롭다운 메뉴 */}
@@ -98,16 +113,28 @@ export default function Header({ onMenuToggle, showMobileMenu = false }: HeaderP
                   <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center space-x-3">
                       <div className="flex-shrink-0">
-                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-sm font-medium">사</span>
-                        </div>
+                        {userProfile?.profileImageUrl ? (
+                          <Image
+                            src={userProfile.profileImageUrl}
+                            alt={userProfile.name || '사용자'}
+                            width={32}
+                            height={32}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span className="text-white text-sm font-medium">
+                              {userProfile?.name?.charAt(0) || '사'}
+                            </span>
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                          사용자
+                          {userProfile?.name || '사용자'}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          user@krgeobuk.com
+                          {userProfile?.email || 'user@krgeobuk.com'}
                         </p>
                       </div>
                     </div>
