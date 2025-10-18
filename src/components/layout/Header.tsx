@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useAuth } from '@/hooks/useAuth';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -16,6 +17,7 @@ export default function Header({
   showMobileMenu = false,
 }: HeaderProps = {}): JSX.Element {
   const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
   const { userProfile } = useUserProfile();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -54,6 +56,22 @@ export default function Header({
     setIsUserMenuOpen(!isUserMenuOpen);
   };
 
+  // SSO 로그인 처리
+  const handleLogin = (): void => {
+    const returnUrl = typeof window !== 'undefined' ? window.location.pathname : '/';
+    const redirectUri = encodeURIComponent(`${window.location.origin}${returnUrl}`);
+    const ssoLoginUrl = `${process.env.NEXT_PUBLIC_AUTH_SERVER_URL}/auth/login?redirect_uri=${redirectUri}`;
+    window.location.href = ssoLoginUrl;
+  };
+
+  // SSO 회원가입 처리
+  const handleSignup = (): void => {
+    const returnUrl = typeof window !== 'undefined' ? window.location.pathname : '/';
+    const redirectUri = encodeURIComponent(`${window.location.origin}${returnUrl}`);
+    const ssoSignupUrl = `${process.env.NEXT_PUBLIC_AUTH_SERVER_URL}/auth/signup?redirect_uri=${redirectUri}`;
+    window.location.href = ssoSignupUrl;
+  };
+
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40 transition-colors duration-200">
       <div className="px-4 sm:px-6 lg:px-8">
@@ -89,88 +107,37 @@ export default function Header({
             {/* 테마 토글 */}
             <ThemeToggle variant="icon" size="md" />
 
-            <div className="relative" ref={userMenuRef}>
-              <button
-                onClick={toggleUserMenu}
-                className="rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-                aria-expanded={isUserMenuOpen}
-                aria-haspopup="true"
-              >
-                {userProfile?.profileImageUrl ? (
-                  <Image
-                    src={userProfile.profileImageUrl}
-                    alt={userProfile.name || '사용자'}
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-colors duration-200"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600 transition-colors duration-200">
-                    <svg
-                      className="h-6 w-6 text-gray-600 dark:text-gray-300"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </button>
-
-              {/* 드롭다운 메뉴 */}
-              {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
-                  {/* 사용자 정보 섹션 */}
-                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        {userProfile?.profileImageUrl ? (
-                          <Image
-                            src={userProfile.profileImageUrl}
-                            alt={userProfile.name || '사용자'}
-                            width={32}
-                            height={32}
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                            <span className="text-white text-sm font-medium">
-                              {userProfile?.name?.charAt(0) || '사'}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                          {userProfile?.name || '사용자'}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {userProfile?.email || 'user@krgeobuk.com'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 메뉴 항목들 */}
-                  <div className="py-1">
-                    <button
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        router.push('/profile');
-                      }}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-left"
-                    >
+            {/* 로딩 상태 */}
+            {isLoading ? (
+              <div className="flex items-center space-x-3">
+                <div className="w-20 h-9 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+                <div className="w-24 h-9 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse"></div>
+              </div>
+            ) : isAuthenticated ? (
+              /* 로그인 상태: 프로필 아이콘 + 드롭다운 */
+              <div className="relative" ref={userMenuRef}>
+                <button
+                  onClick={toggleUserMenu}
+                  className="rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                  aria-expanded={isUserMenuOpen}
+                  aria-haspopup="true"
+                  aria-label="사용자 메뉴"
+                >
+                  {userProfile?.profileImageUrl ? (
+                    <Image
+                      src={userProfile.profileImageUrl}
+                      alt={userProfile.name || '사용자'}
+                      width={40}
+                      height={40}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400 transition-colors duration-200"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600 transition-colors duration-200">
                       <svg
-                        className="w-4 h-4 mr-3"
+                        className="h-6 w-6 text-gray-600 dark:text-gray-300"
                         fill="none"
-                        stroke="currentColor"
                         viewBox="0 0 24 24"
+                        stroke="currentColor"
                       >
                         <path
                           strokeLinecap="round"
@@ -179,86 +146,165 @@ export default function Header({
                           d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                         />
                       </svg>
-                      프로필 설정
-                    </button>
+                    </div>
+                  )}
+                </button>
 
-                    <button
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        router.push('/settings');
-                      }}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-left"
-                    >
-                      <svg
-                        className="w-4 h-4 mr-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                        />
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                        />
-                      </svg>
-                      설정
-                    </button>
+                {/* 드롭다운 메뉴 */}
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50">
+                    {/* 사용자 정보 섹션 */}
+                    <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          {userProfile?.profileImageUrl ? (
+                            <Image
+                              src={userProfile.profileImageUrl}
+                              alt={userProfile.name || '사용자'}
+                              width={32}
+                              height={32}
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                              <span className="text-white text-sm font-medium">
+                                {userProfile?.name?.charAt(0) || '사'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                            {userProfile?.name || '사용자'}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                            {userProfile?.email || 'user@krgeobuk.com'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-                    <button
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        router.push('/help');
-                      }}
-                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-left"
-                    >
-                      <svg
-                        className="w-4 h-4 mr-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                    {/* 메뉴 항목들 */}
+                    <div className="py-1">
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          router.push('/profile');
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-left"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                        />
-                      </svg>
-                      도움말
-                    </button>
+                        <svg
+                          className="w-4 h-4 mr-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                        프로필 설정
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          router.push('/settings');
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-left"
+                      >
+                        <svg
+                          className="w-4 h-4 mr-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                        </svg>
+                        설정
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          router.push('/help');
+                        }}
+                        className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 text-left"
+                      >
+                        <svg
+                          className="w-4 h-4 mr-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        도움말
+                      </button>
+                    </div>
+
+                    <div className="border-t border-gray-200 dark:border-gray-700">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200"
+                      >
+                        <svg
+                          className="w-4 h-4 mr-3"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                          />
+                        </svg>
+                        로그아웃
+                      </button>
+                    </div>
                   </div>
-
-                  <div className="border-t border-gray-200 dark:border-gray-700">
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-200"
-                    >
-                      <svg
-                        className="w-4 h-4 mr-3"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                        />
-                      </svg>
-                      로그아웃
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              /* 로그아웃 상태: 로그인 + 회원가입 버튼 */
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleLogin}
+                  className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 border-2 border-blue-600 dark:border-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                  aria-label="로그인"
+                >
+                  로그인
+                </button>
+                <button
+                  onClick={handleSignup}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
+                  aria-label="회원가입"
+                >
+                  회원가입
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
