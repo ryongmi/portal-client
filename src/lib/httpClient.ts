@@ -34,10 +34,6 @@ export const httpClient = new HttpClient(
   {
     // 환경변수에서 허용된 오리진 읽기
     allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || [
-      // 서브도메인 기반 서버들 (hostname만 포함)
-      'auth.krgeobuk.local',
-      'authz.krgeobuk.local',
-      'portal.krgeobuk.local',
       // localhost
       'localhost',
       '127.0.0.1',
