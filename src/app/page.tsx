@@ -1,17 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useAppDispatch } from '@/store/hooks';
-import { logoutUser } from '@/store/slices/authSlice';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import Image from 'next/image';
+import SimpleLayout from '@/components/layout/SimpleLayout';
 
 export default function Home(): JSX.Element {
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { availableServices, loading: servicesLoading, error: servicesError } = useUserProfile();
-  const dispatch = useAppDispatch();
 
   // SSO 로그인 처리
   const handleLogin = (): void => {
@@ -24,223 +20,14 @@ export default function Home(): JSX.Element {
   // 인증된 사용자는 availableServices 사용, 미인증 사용자는 빈 배열
   const visibleServices = isAuthenticated ? availableServices : [];
 
-  // 메뉴 외부 클릭 시 메뉴 닫기
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent): void => {
-      const target = event.target as Element;
-      if (userMenuOpen && !target.closest('.user-menu')) {
-        setUserMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    return (): void => document.removeEventListener('click', handleClickOutside);
-  }, [userMenuOpen]);
-
-  // 로그아웃 처리
-  const handleLogout = async (): Promise<void> => {
-    try {
-      await dispatch(logoutUser()).unwrap();
-    } catch (_error) {
-      // 로그아웃 실패 오류 로그
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-      {/* 헤더 */}
-      <header className="bg-white/90 backdrop-blur-md shadow-sm border-b border-white/30 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-lg flex items-center justify-center">
-                <svg
-                  className="w-5 h-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                  />
-                </svg>
-              </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-700 to-gray-600 bg-clip-text text-transparent">
-                KRGeobuk Portal
-              </h1>
-            </div>
-            <div className="flex items-center space-x-3">
-              {!isAuthenticated ? (
-                <>
-                  <button
-                    onClick={handleLogin}
-                    className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-blue-400 to-indigo-400 text-gray-800 text-sm font-medium rounded-lg hover:from-blue-500 hover:to-indigo-500 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
-                  >
-                    로그인 / 회원가입
-                  </button>
-                </>
-              ) : (
-                <></>
-              )}
-
-              {/* 사용자 메뉴 */}
-              {isAuthenticated && (
-                <div className="relative user-menu">
-                  <button
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <svg
-                      className="h-5 w-5 text-gray-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                  </button>
-
-                  {/* 드롭다운 메뉴 */}
-                  {userMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-56 bg-white/95 backdrop-blur-sm rounded-xl shadow-xl border border-white/30 py-2 z-50">
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-700">
-                          {user?.name || '사용자'}
-                        </p>
-                        <p className="text-xs text-gray-500">{user?.email || 'user@example.com'}</p>
-                      </div>
-
-                      <div className="py-1">
-                        <a
-                          href="#"
-                          className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                            />
-                          </svg>
-                          프로필 설정
-                        </a>
-
-                        <a
-                          href="#"
-                          className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                            />
-                          </svg>
-                          계정 보안
-                        </a>
-
-                        <a
-                          href="#"
-                          className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
-                          </svg>
-                          설정
-                        </a>
-
-                        <a
-                          href="#"
-                          className="flex items-center px-4 py-2 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                            />
-                          </svg>
-                          도움말
-                        </a>
-                      </div>
-
-                      <div className="border-t border-gray-100 py-1">
-                        <button
-                          onClick={handleLogout}
-                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200"
-                        >
-                          <svg
-                            className="w-4 h-4 mr-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                            />
-                          </svg>
-                          로그아웃
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* 메인 컨텐츠 */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <SimpleLayout>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-200">
+        {/* 메인 컨텐츠 */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* 헤로 섹션 */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 text-sm font-medium rounded-full mb-6">
+          <div className="inline-flex items-center px-4 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium rounded-full mb-6 transition-colors duration-200">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -251,17 +38,17 @@ export default function Home(): JSX.Element {
             </svg>
             통합 서비스 포탈
           </div>
-          <h2 className="text-5xl font-bold bg-gradient-to-r from-gray-700 via-blue-700 to-indigo-700 bg-clip-text text-transparent mb-6">
+          <h2 className="text-5xl font-bold bg-gradient-to-r from-gray-700 via-blue-700 to-indigo-700 dark:from-gray-100 dark:via-blue-400 dark:to-indigo-400 bg-clip-text text-transparent mb-6">
             KRGeobuk 서비스 포탈
           </h2>
-          <p className="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed">
+          <p className="text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed transition-colors duration-200">
             모든 서비스에 쉽고 빠르게 접근하세요. <br />
             통합된 환경에서 효율적으로 작업할 수 있습니다.
           </p>
 
           {/* 통계 섹션 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12 max-w-2xl mx-auto">
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl p-6 border border-white/30">
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-6 border border-white/30 dark:border-gray-700/30 transition-colors duration-200">
               {isAuthenticated && servicesLoading ? (
                 <div className="animate-pulse">
                   <div className="h-8 bg-gray-300 rounded w-12 mb-2"></div>
@@ -269,40 +56,40 @@ export default function Home(): JSX.Element {
                 </div>
               ) : (
                 <>
-                  <div className="text-3xl font-bold text-blue-500 mb-2">
+                  <div className="text-3xl font-bold text-blue-500 dark:text-blue-400 mb-2">
                     {visibleServices.length}
                   </div>
-                  <div className="text-sm text-gray-500">사용 가능한 서비스</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">사용 가능한 서비스</div>
                 </>
               )}
             </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl p-6 border border-white/30">
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-6 border border-white/30 dark:border-gray-700/30 transition-colors duration-200">
               {isAuthenticated && servicesLoading ? (
                 <div className="animate-pulse">
-                  <div className="h-8 bg-gray-300 rounded w-12 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-16"></div>
+                  <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-12 mb-2"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
                 </div>
               ) : (
                 <>
-                  <div className="text-3xl font-bold text-green-600 mb-2">
+                  <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
                     {visibleServices.filter((s) => !s.isVisibleByRole).length}
                   </div>
-                  <div className="text-sm text-gray-500">공개 서비스</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">공개 서비스</div>
                 </>
               )}
             </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl p-6 border border-white/30">
+            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-6 border border-white/30 dark:border-gray-700/30 transition-colors duration-200">
               {isAuthenticated && servicesLoading ? (
                 <div className="animate-pulse">
-                  <div className="h-8 bg-gray-300 rounded w-12 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-20"></div>
+                  <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-12 mb-2"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
                 </div>
               ) : (
                 <>
-                  <div className="text-3xl font-bold text-orange-600 mb-2">
+                  <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
                     {visibleServices.filter((s) => s.isVisibleByRole).length}
                   </div>
-                  <div className="text-sm text-gray-500">권한 기반 서비스</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">권한 기반 서비스</div>
                 </>
               )}
             </div>
@@ -316,19 +103,19 @@ export default function Home(): JSX.Element {
             {[...Array(3)].map((_, index) => (
               <div
                 key={index}
-                className="bg-white/85 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 p-8 animate-pulse"
+                className="bg-white/85 dark:bg-gray-800/85 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/30 p-8 animate-pulse transition-colors duration-200"
               >
                 <div className="flex items-center space-x-4 mb-6">
-                  <div className="w-12 h-12 bg-gray-300 rounded-xl"></div>
+                  <div className="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-xl"></div>
                   <div>
-                    <div className="h-6 bg-gray-300 rounded w-32 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-20"></div>
+                    <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
                   </div>
                 </div>
-                <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-8"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-8"></div>
                 <div className="flex justify-end">
-                  <div className="h-10 bg-gray-300 rounded-xl w-24"></div>
+                  <div className="h-10 bg-gray-300 dark:bg-gray-600 rounded-xl w-24"></div>
                 </div>
               </div>
             ))}
@@ -338,9 +125,9 @@ export default function Home(): JSX.Element {
         {/* 에러 상태 */}
         {isAuthenticated && servicesError && (
           <div className="text-center py-16">
-            <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-24 h-24 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6 transition-colors duration-200">
               <svg
-                className="w-12 h-12 text-red-500"
+                className="w-12 h-12 text-red-500 dark:text-red-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -353,10 +140,10 @@ export default function Home(): JSX.Element {
                 />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
               서비스 목록을 불러올 수 없습니다
             </h3>
-            <p className="text-gray-500 mb-4">{servicesError}</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-4">{servicesError}</p>
             <button
               onClick={() => window.location.reload()}
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -372,14 +159,14 @@ export default function Home(): JSX.Element {
             {visibleServices.map((service, index) => (
               <div
                 key={service.id}
-                className="group relative bg-white/85 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 hover:shadow-2xl hover:scale-105 transition-all duration-300 overflow-hidden"
+                className="group relative bg-white/85 dark:bg-gray-800/85 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/30 hover:shadow-2xl hover:scale-105 transition-all duration-300 overflow-hidden"
                 style={{ animationDelay: `${index * 100}ms` }}
               >
                 {/* 카드 배경 그라데이션 */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 dark:from-blue-900/20 dark:to-indigo-900/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                 {/* 카드 테두리 효과 */}
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 dark:from-blue-500/30 dark:to-indigo-500/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl" />
 
                 <div className="relative p-8">
                   {/* 헤더 */}
@@ -415,7 +202,7 @@ export default function Home(): JSX.Element {
                         <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-0 group-hover:opacity-20 blur rounded-xl transition-opacity duration-300" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-gray-700 group-hover:text-blue-700 transition-colors duration-200">
+                        <h3 className="text-xl font-bold text-gray-700 dark:text-gray-200 group-hover:text-blue-700 dark:group-hover:text-blue-400 transition-colors duration-200">
                           {service.displayName || service.name}
                         </h3>
                         <div className="flex items-center mt-2">
@@ -451,7 +238,7 @@ export default function Home(): JSX.Element {
                   </div>
 
                   {/* 설명 */}
-                  <p className="text-gray-500 mb-8 leading-relaxed text-base">
+                  <p className="text-gray-500 dark:text-gray-400 mb-8 leading-relaxed text-base transition-colors duration-200">
                     {service.description}
                   </p>
 
@@ -489,9 +276,9 @@ export default function Home(): JSX.Element {
               !servicesLoading &&
               !servicesError && (
                 <div className="col-span-full text-center py-16">
-                  <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6 transition-colors duration-200">
                     <svg
-                      className="w-12 h-12 text-gray-400"
+                      className="w-12 h-12 text-gray-400 dark:text-gray-500"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -504,10 +291,10 @@ export default function Home(): JSX.Element {
                       />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
                     접근 가능한 서비스가 없습니다
                   </h3>
-                  <p className="text-gray-500">현재 권한으로 이용 가능한 서비스가 없습니다.</p>
+                  <p className="text-gray-500 dark:text-gray-400">현재 권한으로 이용 가능한 서비스가 없습니다.</p>
                 </div>
               )}
           </div>
@@ -516,9 +303,9 @@ export default function Home(): JSX.Element {
         {/* 미인증 사용자용 안내 */}
         {!isAuthenticated && (
           <div className="text-center py-16">
-            <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-24 h-24 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6 transition-colors duration-200">
               <svg
-                className="w-12 h-12 text-blue-500"
+                className="w-12 h-12 text-blue-500 dark:text-blue-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -531,8 +318,8 @@ export default function Home(): JSX.Element {
                 />
               </svg>
             </div>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">로그인이 필요합니다</h3>
-            <p className="text-gray-500 mb-6">서비스를 이용하려면 로그인하세요.</p>
+            <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">로그인이 필요합니다</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">서비스를 이용하려면 로그인하세요.</p>
             <button
               onClick={handleLogin}
               className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-400 to-indigo-400 text-gray-800 font-medium rounded-xl hover:from-blue-500 hover:to-indigo-500 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
@@ -543,5 +330,6 @@ export default function Home(): JSX.Element {
         )}
       </main>
     </div>
+    </SimpleLayout>
   );
 }
