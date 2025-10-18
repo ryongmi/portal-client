@@ -1,4 +1,4 @@
-import { authApi, type ApiResponse } from '@/lib/httpClient';
+import { authApi } from '@/lib/httpClient';
 import type { UserProfile } from '@krgeobuk/user/interfaces';
 import { BaseService } from './base';
 
