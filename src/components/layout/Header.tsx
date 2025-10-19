@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { ThemeToggle } from '@/components/common/ThemeToggle';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useAuth } from '@/hooks/useAuth';
+import LoadingButton from '@/components/common/LoadingButton';
 
 interface HeaderProps {
   onMenuToggle?: () => void;
@@ -20,6 +21,7 @@ export default function Header({
   const { isAuthenticated, isLoading } = useAuth();
   const { userProfile } = useUserProfile();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isSSOLoading, setIsSSOLoading] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   // 드롭다운 외부 클릭 시 닫기
@@ -56,20 +58,13 @@ export default function Header({
     setIsUserMenuOpen(!isUserMenuOpen);
   };
 
-  // SSO 로그인 처리
-  const handleLogin = (): void => {
+  // SSO 로그인/회원가입 처리 (통합)
+  const handleSSORedirect = (): void => {
+    setIsSSOLoading(true);
     const returnUrl = typeof window !== 'undefined' ? window.location.pathname : '/';
     const redirectUri = encodeURIComponent(`${window.location.origin}${returnUrl}`);
-    const ssoLoginUrl = `${process.env.NEXT_PUBLIC_AUTH_SERVER_URL}/auth/login?redirect_uri=${redirectUri}`;
-    window.location.href = ssoLoginUrl;
-  };
-
-  // SSO 회원가입 처리
-  const handleSignup = (): void => {
-    const returnUrl = typeof window !== 'undefined' ? window.location.pathname : '/';
-    const redirectUri = encodeURIComponent(`${window.location.origin}${returnUrl}`);
-    const ssoSignupUrl = `${process.env.NEXT_PUBLIC_AUTH_SERVER_URL}/auth/signup?redirect_uri=${redirectUri}`;
-    window.location.href = ssoSignupUrl;
+    const ssoUrl = `${process.env.NEXT_PUBLIC_AUTH_SERVER_URL}/auth/login?redirect_uri=${redirectUri}`;
+    window.location.href = ssoUrl;
   };
 
   return (
@@ -287,22 +282,19 @@ export default function Header({
                 )}
               </div>
             ) : (
-              /* 로그아웃 상태: 로그인 + 회원가입 버튼 */
+              /* 로그아웃 상태: 로그인/회원가입 통합 버튼 */
               <div className="flex items-center space-x-3">
-                <button
-                  onClick={handleLogin}
-                  className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 border-2 border-blue-600 dark:border-blue-500 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                  aria-label="로그인"
+                <LoadingButton
+                  onClick={handleSSORedirect}
+                  isLoading={isSSOLoading}
+                  loadingText="이동 중..."
+                  variant="primary"
+                  size="sm"
+                  className="shadow-md hover:shadow-lg"
+                  aria-label="로그인 또는 회원가입"
                 >
-                  로그인
-                </button>
-                <button
-                  onClick={handleSignup}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors duration-200 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
-                  aria-label="회원가입"
-                >
-                  회원가입
-                </button>
+                  로그인 / 회원가입
+                </LoadingButton>
               </div>
             )}
           </div>

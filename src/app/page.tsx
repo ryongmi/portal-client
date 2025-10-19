@@ -1,13 +1,17 @@
 'use client';
 
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import Image from 'next/image';
 import SimpleLayout from '@/components/layout/SimpleLayout';
+import { ServiceCardSkeleton, StatCardSkeleton } from '@/components/common/SkeletonLoader';
+import LoadingButton from '@/components/common/LoadingButton';
 
 export default function Home(): JSX.Element {
   const { isAuthenticated } = useAuth();
   const { availableServices, loading: servicesLoading, error: servicesError } = useUserProfile();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // SSO 로그인 처리
   const handleLogin = (): void => {
@@ -15,6 +19,12 @@ export default function Home(): JSX.Element {
     const redirectUri = encodeURIComponent(`${window.location.origin}${returnUrl}`);
     const ssoStartUrl = `${process.env.NEXT_PUBLIC_AUTH_SERVER_URL}/auth/login?redirect_uri=${redirectUri}`;
     window.location.href = ssoStartUrl;
+  };
+
+  // 새로고침 처리
+  const handleRefresh = (): void => {
+    setIsRefreshing(true);
+    window.location.reload();
   };
 
   // 인증된 사용자는 availableServices 사용, 미인증 사용자는 빈 배열
@@ -48,51 +58,34 @@ export default function Home(): JSX.Element {
 
           {/* 통계 섹션 */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-12 max-w-2xl mx-auto">
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-6 border border-white/30 dark:border-gray-700/30 transition-colors duration-200">
-              {isAuthenticated && servicesLoading ? (
-                <div className="animate-pulse">
-                  <div className="h-8 bg-gray-300 rounded w-12 mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-24"></div>
-                </div>
-              ) : (
-                <>
+            {isAuthenticated && servicesLoading ? (
+              <>
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+                <StatCardSkeleton />
+              </>
+            ) : (
+              <>
+                <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-6 border border-white/30 dark:border-gray-700/30 transition-colors duration-200">
                   <div className="text-3xl font-bold text-blue-500 dark:text-blue-400 mb-2">
                     {visibleServices.length}
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">사용 가능한 서비스</div>
-                </>
-              )}
-            </div>
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-6 border border-white/30 dark:border-gray-700/30 transition-colors duration-200">
-              {isAuthenticated && servicesLoading ? (
-                <div className="animate-pulse">
-                  <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-12 mb-2"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-16"></div>
                 </div>
-              ) : (
-                <>
+                <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-6 border border-white/30 dark:border-gray-700/30 transition-colors duration-200">
                   <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
                     {visibleServices.filter((s) => !s.isVisibleByRole).length}
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">공개 서비스</div>
-                </>
-              )}
-            </div>
-            <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-6 border border-white/30 dark:border-gray-700/30 transition-colors duration-200">
-              {isAuthenticated && servicesLoading ? (
-                <div className="animate-pulse">
-                  <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-12 mb-2"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
                 </div>
-              ) : (
-                <>
+                <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-6 border border-white/30 dark:border-gray-700/30 transition-colors duration-200">
                   <div className="text-3xl font-bold text-orange-600 dark:text-orange-400 mb-2">
                     {visibleServices.filter((s) => s.isVisibleByRole).length}
                   </div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">권한 기반 서비스</div>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -101,23 +94,7 @@ export default function Home(): JSX.Element {
         {isAuthenticated && servicesLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[...Array(3)].map((_, index) => (
-              <div
-                key={index}
-                className="bg-white/85 dark:bg-gray-800/85 backdrop-blur-sm rounded-2xl shadow-lg border border-white/30 dark:border-gray-700/30 p-8 animate-pulse transition-colors duration-200"
-              >
-                <div className="flex items-center space-x-4 mb-6">
-                  <div className="w-12 h-12 bg-gray-300 dark:bg-gray-600 rounded-xl"></div>
-                  <div>
-                    <div className="h-6 bg-gray-300 dark:bg-gray-600 rounded w-32 mb-2"></div>
-                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-20"></div>
-                  </div>
-                </div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-8"></div>
-                <div className="flex justify-end">
-                  <div className="h-10 bg-gray-300 dark:bg-gray-600 rounded-xl w-24"></div>
-                </div>
-              </div>
+              <ServiceCardSkeleton key={index} />
             ))}
           </div>
         )}
@@ -144,12 +121,15 @@ export default function Home(): JSX.Element {
               서비스 목록을 불러올 수 없습니다
             </h3>
             <p className="text-gray-500 dark:text-gray-400 mb-4">{servicesError}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            <LoadingButton
+              onClick={handleRefresh}
+              isLoading={isRefreshing}
+              loadingText="새로고침 중..."
+              variant="primary"
+              className="inline-flex items-center"
             >
               새로고침
-            </button>
+            </LoadingButton>
           </div>
         )}
 
