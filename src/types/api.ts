@@ -12,6 +12,7 @@ export type { PaginatedResult, PaginatedResultBase } from '@krgeobuk/core/interf
 import type { UserProfile } from '@krgeobuk/user/interfaces';
 export type { UserProfile } from '@krgeobuk/user/interfaces';
 export type { Service as ServiceInfo } from '@krgeobuk/shared/service';
+import { OAuthAccountProviderType } from '@krgeobuk/shared/oauth';
 export type { OAuthAccountProviderType } from '@krgeobuk/shared/oauth';
 
 // API 응답 타입 별칭
@@ -32,9 +33,10 @@ export interface SearchFilters {
 
 // 구글 인증 체크 도우미 함수
 export const hasGoogleAuth = (user: UserProfile): boolean =>
-  user.oauthAccount.provider === 'google';
+  user.oauthAccount.provider === OAuthAccountProviderType.GOOGLE;
 
-export const hasNaverAuth = (user: UserProfile): boolean => user.oauthAccount.provider === 'naver';
+export const hasNaverAuth = (user: UserProfile): boolean =>
+  user.oauthAccount.provider === OAuthAccountProviderType.NAVER;
 
 export const isHomepageUser = (user: UserProfile): boolean =>
-  user.oauthAccount.provider === 'homePage';
+  user.oauthAccount.provider === OAuthAccountProviderType.HOMEPAGE;
