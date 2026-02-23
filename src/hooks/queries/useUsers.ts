@@ -1,0 +1,12 @@
+import { useQuery } from '@tanstack/react-query';
+import { userService } from '@/services/userService';
+import type { UserSearchQuery } from '@krgeobuk/user';
+
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+export function useUsers(query: UserSearchQuery = {}) {
+  return useQuery({
+    queryKey: ['users', query],
+    queryFn: () => userService.getUsers(query),
+    staleTime: 2 * 60 * 1000,
+  });
+}
