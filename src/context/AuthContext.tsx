@@ -1,9 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useRef } from 'react';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { logoutUser, fetchUserProfile, initializeAuth, clearUser } from '@/store/slices/authSlice';
-import { tokenManager } from '@/lib/httpClient';
+import React, { createContext, useContext, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { useAuthInitialize } from '@/hooks/queries/useAuthInitialize';
+import { useLogout } from '@/hooks/mutations/useLogout';
+import { useAuthStore } from '@/store/authStore';
 import type { UserProfile } from '@krgeobuk/user/interfaces';
 
 interface AuthContextType {
@@ -17,82 +18,53 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }): JSX.Element {
-  const dispatch = useAppDispatch();
-  const { user, isAuthenticated, isLoading, error, isInitialized } = useAppSelector(
-    (state) => state.auth
-  );
-  const initializeRef = useRef(false);
+export function AuthProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
+  const queryClient = useQueryClient();
+  const { setAuthenticated, setInitialized, clearAuth, isAuthenticated } = useAuthStore();
+  const logoutMutation = useLogout();
 
-  // 초기 인증 상태 확인 (쿠키 기반)
+  // 앱 초기화 query
+  const initQuery = useAuthInitialize();
+
+  // react-query 결과를 Zustand 상태로 동기화
   useEffect(() => {
-    const checkInitialAuth = async (): Promise<void> => {
-      // 이미 초기화되었거나 진행 중이면 스킵 (StrictMode 대응)
-      if (isInitialized || initializeRef.current) {
-        return;
-      }
+    if (initQuery.isSuccess) {
+      const { isLogin, user } = initQuery.data;
+      setAuthenticated(!!(isLogin && user));
+      setInitialized(true);
+    } else if (initQuery.isError) {
+      setAuthenticated(false);
+      setInitialized(true);
+    }
+  }, [initQuery.isSuccess, initQuery.isError, initQuery.data, setAuthenticated, setInitialized]);
 
-      initializeRef.current = true;
-
-      try {
-        await dispatch(initializeAuth()).unwrap();
-      } catch (_error) {
-        // 인증되지 않은 사용자
-      } finally {
-        // 초기화 완료 후 플래그 해제
-        initializeRef.current = false;
-      }
-    };
-
-    // TokenManager 이벤트 리스너 설정
-    const handleTokenCleared = (): void => {
-      dispatch(clearUser());
-    };
-
-    // const handleTokenUpdated = (_event: CustomEvent): void => {
-    //   // 토큰이 업데이트되었을 때의 처리
-    //   // initialize에서 이미 사용자 정보를 받아오므로 추가 호출 불필요
-    // };
-
-    // 이벤트 리스너 등록
+  // tokenCleared 이벤트 (shared-lib에서 발생)
+  useEffect(() => {
+    const handleTokenCleared = (): void => clearAuth();
     window.addEventListener('tokenCleared', handleTokenCleared);
-    // window.addEventListener('tokenUpdated', handleTokenUpdated as EventListener);
+    return (): void => window.removeEventListener('tokenCleared', handleTokenCleared);
+  }, [clearAuth]);
 
-    // 초기 인증 확인
-    checkInitialAuth();
-
-    return (): void => {
-      window.removeEventListener('tokenCleared', handleTokenCleared);
-      // window.removeEventListener('tokenUpdated', handleTokenUpdated as EventListener);
-    };
-  }, [dispatch, isInitialized]);
-
-  // 로그아웃
   const logout = async (): Promise<void> => {
-    try {
-      await dispatch(logoutUser()).unwrap();
-    } catch (_error) {
-      // 로그아웃 실패 오류 로그
-      // 로그아웃 실패해도 클라이언트 상태는 초기화
-      dispatch(clearUser());
-      tokenManager.clearAccessToken();
-    }
+    await logoutMutation.mutateAsync();
   };
 
-  // 사용자 정보 새로고침
   const refreshUser = async (): Promise<void> => {
-    try {
-      await dispatch(fetchUserProfile()).unwrap();
-    } catch (_error) {
-      // 사용자 정보 새로고침 실패 오류 로그
-    }
+    await queryClient.invalidateQueries({ queryKey: ['myProfile'] });
   };
+
+  // isAuthenticated가 false로 바뀌면 myProfile 캐시 제거
+  useEffect(() => {
+    if (!isAuthenticated) {
+      void queryClient.removeQueries({ queryKey: ['myProfile'] });
+    }
+  }, [isAuthenticated, queryClient]);
 
   const value: AuthContextType = {
-    user,
-    loading: isLoading,
+    user: initQuery.data?.user ?? null,
+    loading: initQuery.isPending,
     isLoggedIn: isAuthenticated,
-    error,
+    error: initQuery.error ? String(initQuery.error) : null,
     logout,
     refreshUser,
   };

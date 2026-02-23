@@ -6,13 +6,12 @@ import { useThemeStore } from '@/store/themeStore';
 export function ThemeInitializer(): null {
   const { theme, setTheme, setActualTheme } = useThemeStore();
 
-  // localStorage에서 초기 테마 로드
+  // localStorage에서 초기 테마 로드 (마운트 시 1회만)
   useEffect(() => {
     const saved = localStorage.getItem('theme') as typeof theme | null;
     if (saved && ['light', 'dark', 'system'].includes(saved)) {
       setTheme(saved);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 시스템 테마 감지 + DOM 업데이트

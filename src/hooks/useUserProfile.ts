@@ -1,5 +1,5 @@
-import { useAppSelector, useAppDispatch } from '@/store/hooks';
-import { fetchUserProfile } from '@/store/slices/authSlice';
+import { useQueryClient } from '@tanstack/react-query';
+import { useMyProfile } from '@/hooks/queries/useMyProfile';
 import type { UserProfile } from '@krgeobuk/user/interfaces';
 
 interface UseUserProfileReturn {
@@ -17,25 +17,19 @@ interface UseUserProfileReturn {
 
 /**
  * 통합 사용자 프로필 관리 훅
- * - Redux Store에서 사용자 프로필 정보를 가져옴 (API 호출 없음)
+ * - react-query를 통해 사용자 프로필 정보를 가져옴
  * - OAuth 정보, 권한 정보, 서비스 목록을 포함한 완전한 사용자 프로필
  * - 구글/네이버 인증 상태 확인 유틸리티 제공
  * - 접근 가능한 서비스 목록 제공
  */
 export const useUserProfile = (): UseUserProfileReturn => {
-  const dispatch = useAppDispatch();
-  const { user: userProfile, isLoading: loading, error } = useAppSelector((state) => state.auth);
+  const queryClient = useQueryClient();
+  const { data: userProfile, isPending: loading, error } = useMyProfile();
 
-  // refetch 함수 - Redux action을 dispatch하여 API 호출
   const refetch = async (): Promise<void> => {
-    try {
-      await dispatch(fetchUserProfile()).unwrap();
-    } catch (_err) {
-      // Error handled by Redux
-    }
+    await queryClient.invalidateQueries({ queryKey: ['myProfile'] });
   };
 
-  // 편의 함수들
   const hasGoogleAuthValue = userProfile ? userProfile.oauthAccount.provider === 'google' : false;
   const hasNaverAuthValue = userProfile ? userProfile.oauthAccount.provider === 'naver' : false;
   const isHomepageUserValue = userProfile
@@ -43,16 +37,16 @@ export const useUserProfile = (): UseUserProfileReturn => {
     : false;
 
   return {
-    userProfile,
+    userProfile: userProfile ?? null,
     loading,
-    error,
+    error: error ? String(error) : null,
     refetch,
     hasGoogleAuth: hasGoogleAuthValue,
     hasNaverAuth: hasNaverAuthValue,
     isHomepageUser: isHomepageUserValue,
-    availableServices: userProfile?.availableServices || [],
-    roles: userProfile?.authorization.roles || [],
-    permissions: userProfile?.authorization.permissions || [],
+    availableServices: userProfile?.availableServices ?? [],
+    roles: userProfile?.authorization.roles ?? [],
+    permissions: userProfile?.authorization.permissions ?? [],
   };
 };
 

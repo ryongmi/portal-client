@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { useAuthStore } from '@/store/authStore';
 import { useAuth } from '@/hooks/useAuth';
 
 interface AuthGuardProps {
@@ -12,10 +13,11 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
   children,
   requireAuth: _requireAuth = false, // portal-client는 기본적으로 인증 불필요 (현재 미사용)
 }) => {
+  const { isInitialized } = useAuthStore();
   const { isLoading } = useAuth();
 
-  // 로딩 중일 때만 로딩 화면 표시
-  if (isLoading) {
+  // 초기화 완료 전 또는 로딩 중일 때 로딩 화면 표시
+  if (!isInitialized || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
         <div className="text-center">

@@ -3,7 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
-import { ThemeProvider } from '@/context/ThemeContext';
+import { ThemeInitializer } from '@/components/common/ThemeInitializer';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ToastContainer, { toast } from '@/components/common/ToastContainer';
@@ -82,12 +82,11 @@ export function Providers({ children }: ProvidersProps): React.JSX.Element {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider>
-          <AuthProvider>
-            <AuthGuard requireAuth={false}>{children}</AuthGuard>
-            <ToastContainer position="top-right" maxToasts={5} />
-          </AuthProvider>
-        </ThemeProvider>
+        <ThemeInitializer />
+        <AuthProvider>
+          <AuthGuard requireAuth={false}>{children}</AuthGuard>
+          <ToastContainer position="top-right" maxToasts={5} />
+        </AuthProvider>
       </QueryClientProvider>
     </ErrorBoundary>
   );

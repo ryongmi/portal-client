@@ -1,6 +1,6 @@
 'use client';
 
-import { useTheme } from '@/context/ThemeContext';
+import { useThemeStore } from '@/store/themeStore';
 import { Sun, Moon, Monitor } from 'lucide-react';
 import { useState } from 'react';
 
@@ -9,23 +9,23 @@ interface ThemeToggleProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export const ThemeToggle: React.FC<ThemeToggleProps> = ({ 
-  variant = 'icon', 
-  size = 'md' 
+export const ThemeToggle: React.FC<ThemeToggleProps> = ({
+  variant = 'icon',
+  size = 'md',
 }) => {
-  const { theme, actualTheme, setTheme, toggleTheme } = useTheme();
+  const { theme, actualTheme, setTheme, toggleTheme } = useThemeStore();
   const [isOpen, setIsOpen] = useState(false);
 
   const iconSize = {
     sm: 'w-4 h-4',
     md: 'w-5 h-5',
-    lg: 'w-6 h-6'
+    lg: 'w-6 h-6',
   };
 
   const buttonSize = {
     sm: 'p-1.5',
     md: 'p-2',
-    lg: 'p-2.5'
+    lg: 'p-2.5',
   };
 
   if (variant === 'icon') {
@@ -33,7 +33,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
       <button
         onClick={toggleTheme}
         className={`
-          ${buttonSize[size]} 
+          ${buttonSize[size]}
           rounded-lg
           bg-white/80 dark:bg-gray-800/80
           hover:bg-white/90 dark:hover:bg-gray-700/90
@@ -88,11 +88,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
       {isOpen && (
         <>
           {/* 배경 오버레이 */}
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setIsOpen(false)}
-          />
-          
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+
           {/* 드롭다운 메뉴 */}
           <div className="absolute right-0 top-full mt-2 z-20 w-40 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 shadow-lg">
             <div className="p-1">
@@ -104,8 +101,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
                 className={`
                   w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md
                   transition-colors duration-150
-                  ${theme === 'light' 
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' 
+                  ${theme === 'light'
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                     : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50'
                   }
                 `}
@@ -113,7 +110,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
                 <Sun className="w-4 h-4" />
                 라이트 모드
               </button>
-              
+
               <button
                 onClick={() => {
                   setTheme('dark');
@@ -122,8 +119,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
                 className={`
                   w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md
                   transition-colors duration-150
-                  ${theme === 'dark' 
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' 
+                  ${theme === 'dark'
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                     : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50'
                   }
                 `}
@@ -131,7 +128,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
                 <Moon className="w-4 h-4" />
                 다크 모드
               </button>
-              
+
               <button
                 onClick={() => {
                   setTheme('system');
@@ -140,8 +137,8 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
                 className={`
                   w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md
                   transition-colors duration-150
-                  ${theme === 'system' 
-                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' 
+                  ${theme === 'system'
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                     : 'text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50'
                   }
                 `}
