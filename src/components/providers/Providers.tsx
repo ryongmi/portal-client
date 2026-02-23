@@ -1,8 +1,7 @@
 'use client';
 
-import { Provider } from 'react-redux';
-import { useEffect } from 'react';
-import { store } from '@/store';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { AuthProvider } from '@/context/AuthContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthGuard } from '@/components/auth/AuthGuard';
@@ -13,7 +12,23 @@ interface ProvidersProps {
   children: React.ReactNode;
 }
 
-export function Providers({ children }: ProvidersProps): JSX.Element {
+export function Providers({ children }: ProvidersProps): React.JSX.Element {
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            retry: 1,
+            staleTime: 5 * 60 * 1000,
+            refetchOnWindowFocus: false,
+          },
+          mutations: {
+            retry: 0,
+          },
+        },
+      }),
+  );
+
   useEffect(() => {
     // 전역 toast 함수를 window 객체에 등록 (axios interceptor에서 사용)
     if (typeof window !== 'undefined') {
@@ -66,16 +81,14 @@ export function Providers({ children }: ProvidersProps): JSX.Element {
 
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <Provider store={store}>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
           <AuthProvider>
-            <AuthGuard requireAuth={false}>
-              {children}
-            </AuthGuard>
+            <AuthGuard requireAuth={false}>{children}</AuthGuard>
             <ToastContainer position="top-right" maxToasts={5} />
           </AuthProvider>
-        </Provider>
-      </ThemeProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }
