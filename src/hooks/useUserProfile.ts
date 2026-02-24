@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useMyProfile } from '@/hooks/queries/useMyProfile';
+import { useMyProfile } from '@/hooks/queries/auth';
+import { queryKeys } from '@/hooks/queries/keys';
 import type { UserProfile } from '@krgeobuk/user/interfaces';
 
 interface UseUserProfileReturn {
@@ -27,7 +28,7 @@ export const useUserProfile = (): UseUserProfileReturn => {
   const { data: userProfile, isPending: loading, error } = useMyProfile();
 
   const refetch = async (): Promise<void> => {
-    await queryClient.invalidateQueries({ queryKey: ['myProfile'] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.auth.myProfile() });
   };
 
   const hasGoogleAuthValue = userProfile ? userProfile.oauthAccount.provider === 'google' : false;

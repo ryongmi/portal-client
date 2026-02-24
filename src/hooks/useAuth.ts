@@ -1,5 +1,5 @@
 import { useAuthStore } from '@/store/authStore';
-import { useAuthInitialize } from '@/hooks/queries/useAuthInitialize';
+import { useAuthInitialize } from '@/hooks/queries/auth';
 
 export const useAuth = (): {
   user: { id: string; email?: string; name?: string } | null;

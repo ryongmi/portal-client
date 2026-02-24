@@ -2,8 +2,9 @@
 
 import React, { createContext, useContext, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useAuthInitialize } from '@/hooks/queries/useAuthInitialize';
-import { useLogout } from '@/hooks/mutations/useLogout';
+import { useAuthInitialize } from '@/hooks/queries/auth';
+import { useLogout } from '@/hooks/mutations/auth';
+import { queryKeys } from '@/hooks/queries/keys';
 import { useAuthStore } from '@/store/authStore';
 import type { UserProfile } from '@krgeobuk/user/interfaces';
 
@@ -50,13 +51,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   };
 
   const refreshUser = async (): Promise<void> => {
-    await queryClient.invalidateQueries({ queryKey: ['myProfile'] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.auth.myProfile() });
   };
 
   // isAuthenticated가 false로 바뀌면 myProfile 캐시 제거
   useEffect(() => {
     if (!isAuthenticated) {
-      void queryClient.removeQueries({ queryKey: ['myProfile'] });
+      void queryClient.removeQueries({ queryKey: queryKeys.auth.myProfile() });
     }
   }, [isAuthenticated, queryClient]);
 
