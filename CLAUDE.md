@@ -653,7 +653,7 @@ export const useAuth = () => {
 
 portal-client는 krgeobuk 백엔드 서비스들과의 일관된 통신을 위해 표준화된 API 응답 포맷을 사용합니다.
 
-상세한 API 응답 포맷 표준은 [authz-server/CLAUDE.md](../authz-server/CLAUDE.md)의 **"API 응답 포맷 표준"** 섹션을 참조하세요.
+상세한 API 응답 포맷 표준은 [docs/KRGEOBUK_NESTJS_SERVER_GUIDE.md](../docs/KRGEOBUK_NESTJS_SERVER_GUIDE.md)를 참조하세요.
 
 ### 클라이언트 사이드 구현
 ```typescript
